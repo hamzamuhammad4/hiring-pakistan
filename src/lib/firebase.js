@@ -1,8 +1,11 @@
-"use client";
-import { initializeApp } from "firebase/app";
+// src/lib/firebase.js   ← YE FILE PURA REPLACE KAR DE (100% Working)
+
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
+// Firebase config from .env.local
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -12,7 +15,10 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase (only once!)
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
+// Exports
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const storage = getStorage(app);

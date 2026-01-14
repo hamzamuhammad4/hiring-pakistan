@@ -1,33 +1,36 @@
-// src/app/jobs/page.js   ← YE PURA CODE REPLACE KAR DE (100% Working + Beautiful)
+// src/app/page.js   ← YE PURA CODE REPLACE KAR DE (Error Fix)
 
 import JobCard from "@/components/JobCard";
 import { db } from "@/lib/firebase";
 import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
 
-const CITIES = ["All Cities", "Karachi", "Lahore", "Islamabad", "Faisalabad", "Rawalpindi", "Multan"];
-const SALARY_RANGES = ["Any", "0-50k", "50k-100k", "100k-200k", "200k+"];
-const EXPERIENCE = ["Any", "Fresh", "1-2 years", "3-5 years", "5+ years"];
-const JOB_TYPES = ["Any", "Full Time", "Part Time", "Remote", "Internship"];
-
-async function getAllJobs() {
+async function getFeaturedJobs() {
   try {
-    const q = query(collection(db, "jobs"), orderBy("createdAt", "desc"), limit(50));
+    const q = query(collection(db, "jobs"), orderBy("createdAt", "desc"), limit(6));
     const snapshot = await getDocs(q);
     const jobs = [];
-    snapshot.forEach((doc) => jobs.push({ id: doc.id, ...doc.data() }));
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      jobs.push({
+        id: doc.id,
+        ...data,
+        // Timestamp ko safe string mein convert kar do
+        createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null,
+      });
+    });
     return jobs;
   } catch (error) {
-    console.error(error);
+    console.error("Error fetching jobs:", error);
     return [];
   }
 }
 
-export default async function JobsPage() {
-  const jobs = await getAllJobs();
+export default async function HomePage() {
+  const jobs = await getFeaturedJobs();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* HERO + SEARCH BAR */}
+    <>
+      {/* Hero Section */}
       <section className="bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-700 py-16 px-4">
         <div className="max-w-5xl mx-auto text-center">
           <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-4 drop-shadow-2xl">
@@ -37,7 +40,7 @@ export default async function JobsPage() {
             10,000+ jobs from top companies in Pakistan
           </p>
 
-          {/* SEARCH BAR */}
+          {/* Search Bar */}
           <div className="max-w-3xl mx-auto">
             <div className="bg-white rounded-full shadow-2xl overflow-hidden flex items-center border-4 border-white">
               <div className="pl-7 pr-3">
@@ -70,56 +73,21 @@ export default async function JobsPage() {
         </div>
       </section>
 
-      {/* MAIN CONTENT — FILTERS + JOBS LIST */}
-      <div className="max-w-7xl mx-auto px-4 py-16">
-        <div className="flex flex-col lg:flex-row gap-10">
-          {/* Filters */}
-          <aside className="lg:w-80">
-            <div className="bg-white rounded-3xl shadow-xl p-8 space-y-8 border border-gray-100">
-              <h3 className="text-2xl font-bold text-gray-800">Filters</h3>
-              {[
-                { label: "Location", options: CITIES },
-                { label: "Salary Range", options: SALARY_RANGES },
-                { label: "Experience", options: EXPERIENCE },
-                { label: "Job Type", options: JOB_TYPES }
-              ].map((filter) => (
-                <div key={filter.label}>
-                  <label className="block text-lg font-semibold text-gray-700 mb-3">
-                    {filter.label}
-                  </label>
-                  <select className="w-full px-6 py-4 rounded-2xl border-2 border-gray-200 focus:border-cyan-500 outline-none text-gray-700">
-                    {filter.options.map(opt => <option key={opt}>{opt}</option>)}
-                  </select>
-                </div>
+      {/* Featured Jobs */}
+      <section className="py-16 px-4 bg-gray-50">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-3xl font-bold text-center mb-12 text-gray-800">Featured Jobs</h2>
+          {jobs.length === 0 ? (
+            <p className="text-center text-xl text-gray-500 py-20">No jobs posted yet</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+              {jobs.map((job) => (
+                <JobCard key={job.id} job={job} />
               ))}
             </div>
-          </aside>
-
-          {/* Jobs List */}
-          <div className="flex-1">
-            <div className="flex justify-between items-center mb-10">
-              <h2 className="text-3xl font-bold text-gray-800">{jobs.length} Jobs Found</h2>
-              <select className="px-8 py-4 border-2 border-gray-200 rounded-2xl font-medium">
-                <option>Latest First</option>
-                <option>Salary High to Low</option>
-              </select>
-            </div>
-
-            {jobs.length === 0 ? (
-              <div className="text-center py-32 bg-white rounded-3xl shadow-xl">
-                <p className="text-3xl text-gray-500 font-bold">No jobs posted yet</p>
-                <p className="text-xl text-gray-400 mt-4">Be the first company to post a job!</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                {jobs.map((job) => (
-                  <JobCard key={job.id} job={job} />
-                ))}
-              </div>
-            )}
-          </div>
+          )}
         </div>
-      </div>
-    </div>
+      </section>
+    </>
   );
 }
