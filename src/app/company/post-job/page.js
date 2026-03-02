@@ -11,6 +11,7 @@ export default function PostJobPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     title: "",
+    category: "",           // ← New field
     companyName: "",
     location: "",
     type: "Full Time",
@@ -39,6 +40,13 @@ export default function PostJobPage() {
       return;
     }
 
+    // Category required check
+    if (!formData.category) {
+      setError("Please select a category");
+      setLoading(false);
+      return;
+    }
+
     try {
       await addDoc(collection(db, "jobs"), {
         ...formData,
@@ -50,6 +58,7 @@ export default function PostJobPage() {
       setSuccess(true);
       setFormData({
         title: "",
+        category: "",           // reset new field
         companyName: "",
         location: "",
         type: "Full Time",
@@ -99,6 +108,33 @@ export default function PostJobPage() {
             />
           </div>
 
+          {/* New Category Dropdown */}
+          <div>
+            <label className="block text-lg font-medium text-gray-700 mb-2">
+              Category *
+            </label>
+            <select
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              className="w-full px-5 py-4 rounded-xl border border-gray-300 focus:border-cyan-500 outline-none bg-white"
+              required
+            >
+              <option value="">Select Category</option>
+              <option value="Web Development">Web Development</option>
+              <option value="Mobile App Development">Mobile App Development</option>
+              <option value="Graphic Design">Graphic Design</option>
+              <option value="UI/UX Design">UI/UX Design</option>
+              <option value="Digital Marketing">Digital Marketing</option>
+              <option value="Content Writing">Content Writing</option>
+              <option value="Software Engineering">Software Engineering</option>
+              <option value="Data Science / AI">Data Science / AI</option>
+              <option value="DevOps / Cloud">DevOps / Cloud</option>
+              <option value="Cyber Security">Cyber Security</option>
+              <option value="Network Engineering">Network Engineering</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
           <div>
             <label className="block text-lg font-medium text-gray-700 mb-2">
               Company Name *
@@ -132,7 +168,7 @@ export default function PostJobPage() {
             <select
               value={formData.type}
               onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-              className="w-full px-5 py-4 rounded-xl border border-gray-300 focus:border-cyan-500 outline-none"
+              className="w-full px-5 py-4 rounded-xl border border-gray-300 focus:border-cyan-500 outline-none bg-white"
               required
             >
               <option value="Full Time">Full Time</option>

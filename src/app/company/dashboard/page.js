@@ -1,27 +1,35 @@
 // src/app/company/dashboard/page.js
-// 100% fixed version (no duplicate alert, real-time count update, toast ready)
+// ERROR FIXED VERSION
 
 "use client";
 
 import { useState, useEffect, useRef } from "react";
 import { auth, db } from "@/lib/firebase";
-import { collection, query, where, getDocs, orderBy, deleteDoc, doc, onSnapshot } from "firebase/firestore";
+import { 
+  collection, query, where, getDocs, orderBy, deleteDoc, doc, 
+  onSnapshot, getDoc, setDoc, updateDoc, increment 
+} from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import toast from 'react-hot-toast'; // ← Ye line add kar (toast ke liye)
+import toast from 'react-hot-toast';
 
 export default function CompanyDashboard() {
   const router = useRouter();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [companyData, setCompanyData] = useState({ credits: 0, plan: 'Basic' });
+  const [recentApps, setRecentApps] = useState([]);
+  
   const [stats, setStats] = useState({
     activeJobs: 0,
     totalApplications: 0,
     pending: 0,
+    reviewed: 0,
+    shortlisted: 0,
+    totalViews: 0
   });
 
-  // Previous application count track karne ke liye (duplicate alert rokne ke liye)
   const prevAppCountRef = useRef(0);
 
   useEffect(() => {
@@ -32,7 +40,27 @@ export default function CompanyDashboard() {
       }
 
       try {
-        // Fetch jobs
+        // FIX: Check if company document exists, if not create it
+        const companyRef = doc(db, "companies", user.uid);
+        const companySnap = await getDoc(companyRef);
+        
+        if (companySnap.exists()) {
+          setCompanyData(companySnap.data());
+        } else {
+          // Create new company document with setDoc instead of updateDoc
+          await setDoc(companyRef, {
+            credits: 5,
+            plan: 'Basic',
+            createdAt: new Date(),
+            email: user.email,
+            companyName: user.displayName || 'Company Name',
+            updatedAt: new Date()
+          });
+          setCompanyData({ credits: 5, plan: 'Basic' });
+          console.log("✅ New company document created");
+        }
+
+        // Get jobs with views count
         const jobsQuery = query(
           collection(db, "jobs"),
           where("companyId", "==", user.uid),
@@ -47,32 +75,37 @@ export default function CompanyDashboard() {
 
         setJobs(jobList);
 
-        // Initial stats
-        setStats({
-          activeJobs: jobList.length,
-          totalApplications: 0,
-          pending: 0,
+        // Calculate total views
+        let totalViews = 0;
+        jobList.forEach(job => {
+          totalViews += job.views || 0;
         });
 
-        // Real-time applications listener
+        setStats(prev => ({
+          ...prev,
+          activeJobs: jobList.length,
+          totalViews: totalViews
+        }));
+
+        // Setup real-time applications listener
         const unsubscribeApps = onSnapshot(collection(db, "applications"), (snapshot) => {
           const allApps = snapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
           }));
 
-          // Sirf is company ke jobs ki applications filter karo
           const companyApps = allApps.filter((app) =>
             jobList.some((job) => job.id === app.jobId)
           );
 
           const currentCount = companyApps.length;
 
-          // Sirf tabhi toast dikhao jab sach mein nayi application aaye
-          if (currentCount > prevAppCountRef.current) {
-            toast.success("New application received!", {
+          // New application notification
+          if (currentCount > prevAppCountRef.current && prevAppCountRef.current > 0) {
+            toast.success("📬 New application received!", {
               duration: 5000,
               position: "top-right",
+              icon: '👤',
               style: {
                 borderRadius: '10px',
                 background: '#10B981',
@@ -81,26 +114,41 @@ export default function CompanyDashboard() {
                 fontSize: '16px',
               },
             });
-
-            // Previous count update kar do taake next time duplicate na aaye
-            prevAppCountRef.current = currentCount;
           }
+          prevAppCountRef.current = currentCount;
 
-          // Stats update
+          // Update stats with status counts
           setStats((prev) => ({
             ...prev,
             totalApplications: currentCount,
             pending: companyApps.filter((app) => app.status === "pending").length,
+            reviewed: companyApps.filter((app) => app.status === "reviewed").length,
+            shortlisted: companyApps.filter((app) => app.status === "shortlisted").length,
           }));
+
+          // Set recent 5 applications
+          const sorted = companyApps.sort((a, b) => 
+            new Date(b.appliedAt?.toDate?.() || 0) - new Date(a.appliedAt?.toDate?.() || 0)
+          ).slice(0, 5);
+          
+          // Enrich with job titles
+          Promise.all(sorted.map(async (app) => {
+            try {
+              const jobDoc = await getDoc(doc(db, "jobs", app.jobId));
+              return {
+                ...app,
+                jobTitle: jobDoc.exists() ? jobDoc.data().title : 'Unknown Job'
+              };
+            } catch (err) {
+              return { ...app, jobTitle: 'Unknown Job' };
+            }
+          })).then(setRecentApps);
         });
 
-        // Cleanup
-        return () => {
-          unsubscribeApps();
-        };
+        return () => unsubscribeApps();
       } catch (err) {
         console.error("Dashboard error:", err);
-        setError("Failed to load dashboard. Please try again.");
+        setError(err.message || "Failed to load dashboard. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -110,8 +158,12 @@ export default function CompanyDashboard() {
   }, [router]);
 
   const handleLogout = async () => {
-    await auth.signOut();
-    router.push("/company/login");
+    try {
+      await auth.signOut();
+      router.push("/company/login");
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
   };
 
   const handleDelete = async (jobId) => {
@@ -124,19 +176,23 @@ export default function CompanyDashboard() {
         ...prev,
         activeJobs: prev.activeJobs - 1,
       }));
-      toast.success("Job deleted successfully!");
+      toast.success("✅ Job deleted successfully!");
     } catch (err) {
       console.error("Delete error:", err);
       toast.error("Failed to delete job");
     }
   };
 
+  const handleAddCredits = () => {
+    router.push("/company/funds");
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto mb-4"></div>
-          <p className="text-xl text-gray-700">Loading dashboard...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-cyan-600 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-xl text-gray-700 font-medium">Loading your dashboard...</p>
         </div>
       </div>
     );
@@ -145,12 +201,13 @@ export default function CompanyDashboard() {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-center bg-white rounded-2xl shadow-2xl p-10 max-w-lg">
+        <div className="text-center bg-white rounded-3xl shadow-2xl p-12 max-w-lg">
+          <div className="text-6xl mb-4">😕</div>
           <h1 className="text-3xl font-bold text-red-600 mb-4">Error</h1>
-          <p className="text-lg text-gray-600 mb-6">{error}</p>
+          <p className="text-lg text-gray-600 mb-8">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="bg-cyan-600 text-white px-8 py-4 rounded-xl hover:bg-cyan-700 transition font-medium"
+            className="bg-cyan-600 text-white px-10 py-4 rounded-xl hover:bg-cyan-700 transition font-medium text-lg shadow-lg"
           >
             Retry
           </button>
@@ -160,113 +217,256 @@ export default function CompanyDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-10">
-          <h1 className="text-4xl font-bold text-gray-800">
-            Company Dashboard
-          </h1>
-          <button
-            onClick={handleLogout}
-            className="bg-red-600 hover:bg-red-700 text-white font-medium px-6 py-3 rounded-xl transition"
-          >
-            Logout
-          </button>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-8 px-4">
+      <div className="max-w-[1600px] mx-auto">
+        {/* Header with Credits */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 bg-white rounded-2xl shadow-lg p-6">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-800 mb-2">
+              📊 Company Dashboard
+            </h1>
+            <p className="text-gray-500">Welcome back, {auth.currentUser?.email}</p>
+          </div>
+          
+          <div className="flex items-center gap-4 mt-4 md:mt-0">
+            {/* Credits Display */}
+            <div className="bg-gradient-to-r from-purple-500 to-purple-700 text-white px-6 py-3 rounded-xl shadow-md">
+              <div className="text-sm opacity-90">Available Credits</div>
+              <div className="flex items-center gap-3">
+                <span className="text-2xl font-bold">{companyData?.credits || 0}</span>
+                <span className="bg-white/20 px-2 py-1 rounded text-sm">Plan: {companyData?.plan || 'Basic'}</span>
+              </div>
+            </div>
+            
+            <button
+              onClick={handleAddCredits}
+              className="bg-green-600 hover:bg-green-700 text-white font-medium px-6 py-3 rounded-xl transition shadow-md flex items-center gap-2"
+            >
+              <span>💰</span> Add Credits
+            </button>
+            
+            <button
+              onClick={handleLogout}
+              className="bg-red-600 hover:bg-red-700 text-white font-medium px-6 py-3 rounded-xl transition shadow-md"
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-          <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-            <h3 className="text-4xl font-bold text-cyan-600 mb-2">{stats.activeJobs}</h3>
-            <p className="text-gray-600 text-lg">Active Jobs</p>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-8">
+          <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl shadow-lg p-6 text-white">
+            <div className="text-3xl mb-2">📋</div>
+            <h3 className="text-3xl font-bold mb-1">{stats.activeJobs}</h3>
+            <p className="text-blue-100">Active Jobs</p>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-            <h3 className="text-4xl font-bold text-cyan-600 mb-2">{stats.totalApplications}</h3>
-            <p className="text-gray-600 text-lg">Total Applications</p>
+          <div className="bg-gradient-to-br from-green-500 to-green-700 rounded-2xl shadow-lg p-6 text-white">
+            <div className="text-3xl mb-2">👥</div>
+            <h3 className="text-3xl font-bold mb-1">{stats.totalApplications}</h3>
+            <p className="text-green-100">Total Applications</p>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-            <h3 className="text-4xl font-bold text-cyan-600 mb-2">{stats.pending}</h3>
-            <p className="text-gray-600 text-lg">Pending Reviews</p>
+          <div className="bg-gradient-to-br from-yellow-500 to-yellow-700 rounded-2xl shadow-lg p-6 text-white">
+            <div className="text-3xl mb-2">⏳</div>
+            <h3 className="text-3xl font-bold mb-1">{stats.pending}</h3>
+            <p className="text-yellow-100">Pending Review</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-2xl shadow-lg p-6 text-white">
+            <div className="text-3xl mb-2">👀</div>
+            <h3 className="text-3xl font-bold mb-1">{stats.reviewed}</h3>
+            <p className="text-indigo-100">Reviewed</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl shadow-lg p-6 text-white">
+            <div className="text-3xl mb-2">⭐</div>
+            <h3 className="text-3xl font-bold mb-1">{stats.shortlisted}</h3>
+            <p className="text-purple-100">Shortlisted</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-pink-500 to-pink-700 rounded-2xl shadow-lg p-6 text-white">
+            <div className="text-3xl mb-2">👁️</div>
+            <h3 className="text-3xl font-bold mb-1">{stats.totalViews}</h3>
+            <p className="text-pink-100">Total Views</p>
           </div>
         </div>
 
-        {/* Post Job Button */}
-        <div className="text-center mb-12">
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
           <Link
             href="/company/post-job"
-            className="inline-block bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-700 hover:to-blue-800 text-white font-bold text-xl px-12 py-6 rounded-2xl shadow-xl transform hover:scale-105 transition-all"
+            className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
           >
-            Post a New Job
+            <div className="text-4xl mb-3">📝</div>
+            <h3 className="text-xl font-bold mb-1">Post New Job</h3>
+            <p className="text-sm opacity-90">Create a job listing</p>
           </Link>
+          
+          <Link
+            href="/company/funds"
+            className="bg-gradient-to-r from-purple-500 to-purple-700 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+          >
+            <div className="text-4xl mb-3">💰</div>
+            <h3 className="text-xl font-bold mb-1">Buy Credits</h3>
+            <p className="text-sm opacity-90">View CVs & upgrade plan</p>
+          </Link>
+          
+          <Link
+            href="/company/complaints"
+            className="bg-gradient-to-r from-red-500 to-red-700 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+          >
+            <div className="text-4xl mb-3">⚠️</div>
+            <h3 className="text-xl font-bold mb-1">Complaints</h3>
+            <p className="text-sm opacity-90">Report an issue</p>
+          </Link>
+          
+          <Link
+            href="/company/settings"
+            className="bg-gradient-to-r from-gray-600 to-gray-800 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+          >
+            <div className="text-4xl mb-3">⚙️</div>
+            <h3 className="text-xl font-bold mb-1">Settings</h3>
+            <p className="text-sm opacity-90">Profile & preferences</p>
+          </Link>
+        </div>
+
+        {/* Recent Applications */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 mb-12">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">📬 Recent Applications</h2>
+          {recentApps.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">No applications yet</p>
+          ) : (
+            <div className="space-y-4">
+              {recentApps.map(app => (
+                <div key={app.id} className="flex justify-between items-center border-b pb-3 hover:bg-gray-50 p-2 rounded-lg transition">
+                  <div>
+                    <p className="font-semibold text-gray-800">{app.name}</p>
+                    <p className="text-sm text-gray-500">for {app.jobTitle}</p>
+                    <span className={`text-xs px-2 py-1 rounded-full inline-block mt-1 ${
+                      app.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      app.status === 'reviewed' ? 'bg-blue-100 text-blue-800' :
+                      'bg-green-100 text-green-800'
+                    }`}>
+                      {app.status}
+                    </span>
+                  </div>
+                  <Link
+                    href={`/company/applicants/${app.id}`}
+                    className="bg-blue-100 text-blue-600 px-3 py-2 rounded-lg text-sm hover:bg-blue-200 transition"
+                  >
+                    View
+                  </Link>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* My Posted Jobs */}
         <div>
-          <h2 className="text-3xl font-bold text-gray-800 mb-6">My Posted Jobs</h2>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-3xl font-bold text-gray-800">📋 My Posted Jobs</h2>
+            <Link
+              href="/company/jobs"
+              className="text-cyan-600 hover:text-cyan-800 font-medium"
+            >
+              View All →
+            </Link>
+          </div>
 
           {jobs.length === 0 ? (
-            <p className="text-center text-xl text-gray-500 py-10">
-              You haven't posted any jobs yet. Start by posting one!
-            </p>
+            <div className="bg-white rounded-2xl shadow-lg p-16 text-center">
+              <div className="text-6xl mb-4">📭</div>
+              <p className="text-xl text-gray-500 mb-4">
+                You haven't posted any jobs yet.
+              </p>
+              <Link
+                href="/company/post-job"
+                className="inline-block bg-gradient-to-r from-cyan-600 to-blue-700 text-white font-bold text-lg px-8 py-4 rounded-xl hover:from-cyan-700 hover:to-blue-800 transition shadow-lg"
+              >
+                Post Your First Job
+              </Link>
+            </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {jobs.map((job) => (
-                <div key={job.id} className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {jobs.slice(0, 6).map((job) => (
+                <div 
+                  key={job.id} 
+                  className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02]"
+                >
                   <div className="p-6">
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">{job.title}</h3>
-                    <p className="text-gray-600 mb-4">{job.companyName}</p>
+                    <div className="flex justify-between items-start mb-3">
+                      <h3 className="text-xl font-bold text-gray-800 truncate">{job.title}</h3>
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                        job.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {job.status || 'active'}
+                      </span>
+                    </div>
+                    
+                    <p className="text-gray-600 mb-2 font-medium">{job.companyName}</p>
 
-                    <div className="flex flex-wrap gap-3 mb-4">
-                      <span className="bg-cyan-50 text-cyan-700 px-3 py-1 rounded-full text-sm">
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <span className="bg-cyan-100 text-cyan-800 px-3 py-1 rounded-full text-xs font-medium">
                         {job.location || "Karachi"}
                       </span>
-                      <span className="bg-cyan-50 text-cyan-700 px-3 py-1 rounded-full text-sm">
+                      <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs font-medium">
                         {job.type || "Full Time"}
                       </span>
-                      <span className="bg-green-50 text-green-700 px-3 py-1 rounded-full text-sm font-bold">
+                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold">
                         {job.salary || "Negotiable"}
                       </span>
                     </div>
 
-                    <p className="text-gray-600 mb-4 line-clamp-3">
-                      {job.description?.substring(0, 150) || "No description"}...
+                    <div className="flex justify-between text-sm text-gray-500 mb-4">
+                      <span>👁️ {job.views || 0} views</span>
+                      <span>📝 {job.applicantsCount || 0} applicants</span>
+                    </div>
+
+                    <p className="text-gray-600 mb-5 line-clamp-2 text-sm">
+                      {job.description?.substring(0, 120) || "No description"}...
                     </p>
 
-                    <div className="flex justify-between items-center mt-4">
-                      <span className="text-sm text-gray-500">
-                        Posted: {job.createdAt ? new Date(job.createdAt.toDate()).toLocaleDateString() : "Recent"}
-                      </span>
-
-                      <div className="flex gap-4">
-                        <Link
-                          href={`/company/edit-job/${job.id}`}
-                          className="text-blue-600 hover:underline text-sm font-medium"
-                        >
-                          Edit
-                        </Link>
-                        <button
-                          onClick={() => handleDelete(job.id)}
-                          className="text-red-600 hover:underline text-sm font-medium"
-                        >
-                          Delete
-                        </button>
-                        <Link
-                          href={`/jobs/${job.id}`}
-                          className="text-cyan-600 hover:underline text-sm font-medium"
-                        >
-                          View Job
-                        </Link>
-                        <Link
-                          href={`/company/applicants/${job.id}`}
-                          className="text-green-600 hover:underline text-sm font-medium"
-                        >
-                          View Applicants
-                        </Link>
-                      </div>
+                    {/* Action Buttons */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <Link
+                        href={`/company/edit-job/${job.id}`}
+                        className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition transform hover:scale-105 shadow flex items-center justify-center gap-1"
+                      >
+                        ✏️ Edit
+                      </Link>
+                      
+                      <button
+                        onClick={() => handleDelete(job.id)}
+                        className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition transform hover:scale-105 shadow flex items-center justify-center gap-1"
+                      >
+                        🗑️ Delete
+                      </button>
+                      
+                      <Link
+                        href={`/jobs/${job.id}`}
+                        className="bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition transform hover:scale-105 shadow flex items-center justify-center gap-1"
+                      >
+                        👁️ View
+                      </Link>
+                      
+                      <Link
+                        href={`/company/applicants/${job.id}`}
+                        className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition transform hover:scale-105 shadow flex items-center justify-center gap-1"
+                      >
+                        👥 Applicants
+                      </Link>
                     </div>
+
+                    <p className="text-xs text-gray-400 mt-4 text-right">
+                      Posted: {job.createdAt ? new Date(job.createdAt.toDate?.() || job.createdAt).toLocaleDateString('en-PK', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      }) : "Recent"}
+                    </p>
                   </div>
                 </div>
               ))}

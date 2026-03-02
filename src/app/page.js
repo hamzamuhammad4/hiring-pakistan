@@ -1,9 +1,13 @@
-// src/app/page.js   ← YE PURA CODE REPLACE KAR DE (Error Fix)
+// src/app/page.js   ← YE PURA CODE REPLACE KAR DE (Category Filter Working)
+
+"use client";   // ← YE SABSE ZAROORI HAI (client-side filtering ke liye)
 
 import JobCard from "@/components/JobCard";
 import { db } from "@/lib/firebase";
 import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
+import { useState, useEffect } from "react";
 
+// Server-side data fetch (featured jobs)
 async function getFeaturedJobs() {
   try {
     const q = query(collection(db, "jobs"), orderBy("createdAt", "desc"), limit(6));
@@ -14,7 +18,6 @@ async function getFeaturedJobs() {
       jobs.push({
         id: doc.id,
         ...data,
-        // Timestamp ko safe string mein convert kar do
         createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null,
       });
     });
@@ -25,8 +28,47 @@ async function getFeaturedJobs() {
   }
 }
 
-export default async function HomePage() {
-  const jobs = await getFeaturedJobs();
+// Main page component (client-side)
+export default function HomePage() {
+  const [jobs, setJobs] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [filteredJobs, setFilteredJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchJobs() {
+      const fetchedJobs = await getFeaturedJobs();
+      setJobs(fetchedJobs);
+      setFilteredJobs(fetchedJobs);
+      setLoading(false);
+    }
+    fetchJobs();
+  }, []);
+
+  useEffect(() => {
+    if (selectedCategory === "All") {
+      setFilteredJobs(jobs);
+    } else {
+      const filtered = jobs.filter(job => job.category === selectedCategory);
+      setFilteredJobs(filtered);
+    }
+  }, [selectedCategory, jobs]);
+
+  const categories = [
+    "All",
+    "Web Development",
+    "Mobile App Development",
+    "Graphic Design",
+    "UI/UX Design",
+    "Digital Marketing",
+    "Content Writing",
+    "Software Engineering",
+    "Data Science / AI",
+    "DevOps / Cloud",
+    "Cyber Security",
+    "Network Engineering",
+    "Other",
+  ];
 
   return (
     <>
@@ -40,9 +82,10 @@ export default async function HomePage() {
             10,000+ jobs from top companies in Pakistan
           </p>
 
-          {/* Search Bar */}
-          <div className="max-w-3xl mx-auto">
-            <div className="bg-white rounded-full shadow-2xl overflow-hidden flex items-center border-4 border-white">
+          {/* Search + Category Filter */}
+          <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-4">
+            {/* Search Bar */}
+            <div className="flex-1 bg-white rounded-full shadow-2xl overflow-hidden flex items-center border-4 border-white">
               <div className="pl-7 pr-3">
                 <svg className="w-6 h-6 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -53,10 +96,27 @@ export default async function HomePage() {
                 placeholder="Job title, keywords, company name..."
                 className="w-full py-4 px-2 text-base md:text-lg text-gray-700 outline-none"
               />
-              <button className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold px-10 py-4 text-base md:text-lg rounded-r-full transition shadow-lg">
-                Search Jobs
-              </button>
             </div>
+
+            {/* Category Dropdown */}
+            <div className="md:w-64">
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full py-4 px-6 text-base md:text-lg text-gray-700 bg-white rounded-full border-4 border-white shadow-2xl outline-none cursor-pointer"
+              >
+                {categories.map(cat => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Search Button */}
+            <button className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold px-10 py-4 text-base md:text-lg rounded-full transition shadow-lg">
+              Search Jobs
+            </button>
           </div>
 
           {/* Stats */}
@@ -76,12 +136,19 @@ export default async function HomePage() {
       {/* Featured Jobs */}
       <section className="py-16 px-4 bg-gray-50">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12 text-gray-800">Featured Jobs</h2>
-          {jobs.length === 0 ? (
-            <p className="text-center text-xl text-gray-500 py-20">No jobs posted yet</p>
+          <h2 className="text-3xl font-bold text-center mb-12 text-gray-800">
+            Featured Jobs {selectedCategory !== "All" && `in ${selectedCategory}`}
+          </h2>
+
+          {loading ? (
+            <p className="text-center text-xl text-gray-500 py-20">Loading jobs...</p>
+          ) : filteredJobs.length === 0 ? (
+            <p className="text-center text-xl text-gray-500 py-20">
+              No jobs found in this category yet
+            </p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-              {jobs.map((job) => (
+              {filteredJobs.map((job) => (
                 <JobCard key={job.id} job={job} />
               ))}
             </div>
