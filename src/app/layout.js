@@ -1,8 +1,22 @@
 // src/app/layout.js
-
+import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
-import { Toaster } from 'react-hot-toast';   // ← Ye line add kar di
+import { Toaster } from 'react-hot-toast';
+
+// Inter font - body ke liye (clean, readable)
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+// Outfit font - headings ke liye (bold, modern)
+const outfit = Outfit({
+  subsets: ["latin"],
+  variable: "--font-outfit",
+  display: "swap",
+});
 
 export const metadata = {
   title: "Hiring Pakistan - Pakistan ka #1 Job Portal",
@@ -11,8 +25,8 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body className="bg-gray-50">
+    <html lang="en" className={`${inter.variable} ${outfit.variable}`}>
+      <body className="bg-gray-50 font-sans antialiased">
         <Navbar />
         <main>{children}</main>
         <Toaster 

@@ -1,5 +1,5 @@
 // src/app/company/dashboard/page.js
-// ERROR FIXED VERSION
+// UPDATED WITH LUCIDE REACT ICONS
 
 "use client";
 
@@ -7,11 +7,41 @@ import { useState, useEffect, useRef } from "react";
 import { auth, db } from "@/lib/firebase";
 import { 
   collection, query, where, getDocs, orderBy, deleteDoc, doc, 
-  onSnapshot, getDoc, setDoc, updateDoc, increment 
+  onSnapshot, getDoc, setDoc, increment 
 } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import toast from 'react-hot-toast';
+
+// Import Lucide Icons
+import {
+  LayoutDashboard,
+  Briefcase,
+  Users,
+  Clock,
+  Eye,
+  Star,
+  TrendingUp,
+  PlusCircle,
+  CreditCard,
+  AlertTriangle,
+  Settings,
+  LogOut,
+  Building2,
+  MapPin,
+  DollarSign,
+  Calendar,
+  ExternalLink,
+  Edit,
+  Trash2,
+  FileText,
+  ChevronRight,
+  Coins,
+  Zap,
+  CheckCircle,
+  XCircle,
+  Loader2
+} from "lucide-react";
 
 export default function CompanyDashboard() {
   const router = useRouter();
@@ -40,14 +70,12 @@ export default function CompanyDashboard() {
       }
 
       try {
-        // FIX: Check if company document exists, if not create it
         const companyRef = doc(db, "companies", user.uid);
         const companySnap = await getDoc(companyRef);
         
         if (companySnap.exists()) {
           setCompanyData(companySnap.data());
         } else {
-          // Create new company document with setDoc instead of updateDoc
           await setDoc(companyRef, {
             credits: 5,
             plan: 'Basic',
@@ -57,10 +85,8 @@ export default function CompanyDashboard() {
             updatedAt: new Date()
           });
           setCompanyData({ credits: 5, plan: 'Basic' });
-          console.log("✅ New company document created");
         }
 
-        // Get jobs with views count
         const jobsQuery = query(
           collection(db, "jobs"),
           where("companyId", "==", user.uid),
@@ -75,7 +101,6 @@ export default function CompanyDashboard() {
 
         setJobs(jobList);
 
-        // Calculate total views
         let totalViews = 0;
         jobList.forEach(job => {
           totalViews += job.views || 0;
@@ -87,7 +112,6 @@ export default function CompanyDashboard() {
           totalViews: totalViews
         }));
 
-        // Setup real-time applications listener
         const unsubscribeApps = onSnapshot(collection(db, "applications"), (snapshot) => {
           const allApps = snapshot.docs.map((doc) => ({
             id: doc.id,
@@ -100,24 +124,20 @@ export default function CompanyDashboard() {
 
           const currentCount = companyApps.length;
 
-          // New application notification
           if (currentCount > prevAppCountRef.current && prevAppCountRef.current > 0) {
             toast.success("📬 New application received!", {
               duration: 5000,
               position: "top-right",
-              icon: '👤',
               style: {
                 borderRadius: '10px',
                 background: '#10B981',
                 color: '#fff',
                 padding: '16px',
-                fontSize: '16px',
               },
             });
           }
           prevAppCountRef.current = currentCount;
 
-          // Update stats with status counts
           setStats((prev) => ({
             ...prev,
             totalApplications: currentCount,
@@ -126,12 +146,10 @@ export default function CompanyDashboard() {
             shortlisted: companyApps.filter((app) => app.status === "shortlisted").length,
           }));
 
-          // Set recent 5 applications
           const sorted = companyApps.sort((a, b) => 
             new Date(b.appliedAt?.toDate?.() || 0) - new Date(a.appliedAt?.toDate?.() || 0)
           ).slice(0, 5);
           
-          // Enrich with job titles
           Promise.all(sorted.map(async (app) => {
             try {
               const jobDoc = await getDoc(doc(db, "jobs", app.jobId));
@@ -191,7 +209,7 @@ export default function CompanyDashboard() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-cyan-600 border-t-transparent mx-auto mb-4"></div>
+          <Loader2 className="animate-spin h-16 w-16 text-cyan-600 mx-auto mb-4" />
           <p className="text-xl text-gray-700 font-medium">Loading your dashboard...</p>
         </div>
       </div>
@@ -202,7 +220,7 @@ export default function CompanyDashboard() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="text-center bg-white rounded-3xl shadow-2xl p-12 max-w-lg">
-          <div className="text-6xl mb-4">😕</div>
+          <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-4" />
           <h1 className="text-3xl font-bold text-red-600 mb-4">Error</h1>
           <p className="text-lg text-gray-600 mb-8">{error}</p>
           <button
@@ -219,22 +237,30 @@ export default function CompanyDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-8 px-4">
       <div className="max-w-[1600px] mx-auto">
+        
         {/* Header with Credits */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 bg-white rounded-2xl shadow-lg p-6">
           <div>
-            <h1 className="text-4xl font-bold text-gray-800 mb-2">
-              📊 Company Dashboard
-            </h1>
+            <div className="flex items-center gap-2 mb-2">
+              <Building2 className="h-8 w-8 text-cyan-600" />
+              <h1 className="text-4xl font-bold text-gray-800">Company Dashboard</h1>
+            </div>
             <p className="text-gray-500">Welcome back, {auth.currentUser?.email}</p>
           </div>
           
           <div className="flex items-center gap-4 mt-4 md:mt-0">
             {/* Credits Display */}
             <div className="bg-gradient-to-r from-purple-500 to-purple-700 text-white px-6 py-3 rounded-xl shadow-md">
-              <div className="text-sm opacity-90">Available Credits</div>
+              <div className="text-sm opacity-90 flex items-center gap-1">
+                <Coins className="h-4 w-4" />
+                Available Credits
+              </div>
               <div className="flex items-center gap-3">
                 <span className="text-2xl font-bold">{companyData?.credits || 0}</span>
-                <span className="bg-white/20 px-2 py-1 rounded text-sm">Plan: {companyData?.plan || 'Basic'}</span>
+                <span className="bg-white/20 px-2 py-1 rounded text-sm flex items-center gap-1">
+                  <Zap className="h-3 w-3" />
+                  Plan: {companyData?.plan || 'Basic'}
+                </span>
               </div>
             </div>
             
@@ -242,107 +268,120 @@ export default function CompanyDashboard() {
               onClick={handleAddCredits}
               className="bg-green-600 hover:bg-green-700 text-white font-medium px-6 py-3 rounded-xl transition shadow-md flex items-center gap-2"
             >
-              <span>💰</span> Add Credits
+              <CreditCard className="h-5 w-5" />
+              Add Credits
             </button>
             
             <button
               onClick={handleLogout}
-              className="bg-red-600 hover:bg-red-700 text-white font-medium px-6 py-3 rounded-xl transition shadow-md"
+              className="bg-red-600 hover:bg-red-700 text-white font-medium px-6 py-3 rounded-xl transition shadow-md flex items-center gap-2"
             >
+              <LogOut className="h-5 w-5" />
               Logout
             </button>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-8">
-          <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl shadow-lg p-6 text-white">
-            <div className="text-3xl mb-2">📋</div>
-            <h3 className="text-3xl font-bold mb-1">{stats.activeJobs}</h3>
-            <p className="text-blue-100">Active Jobs</p>
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+          <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl shadow-lg p-5 text-white">
+            <Briefcase className="h-8 w-8 mb-2 opacity-90" />
+            <h3 className="text-3xl font-bold">{stats.activeJobs}</h3>
+            <p className="text-sm text-blue-100">Active Jobs</p>
           </div>
 
-          <div className="bg-gradient-to-br from-green-500 to-green-700 rounded-2xl shadow-lg p-6 text-white">
-            <div className="text-3xl mb-2">👥</div>
-            <h3 className="text-3xl font-bold mb-1">{stats.totalApplications}</h3>
-            <p className="text-green-100">Total Applications</p>
+          <div className="bg-gradient-to-br from-green-500 to-green-700 rounded-2xl shadow-lg p-5 text-white">
+            <Users className="h-8 w-8 mb-2 opacity-90" />
+            <h3 className="text-3xl font-bold">{stats.totalApplications}</h3>
+            <p className="text-sm text-green-100">Total Applications</p>
           </div>
 
-          <div className="bg-gradient-to-br from-yellow-500 to-yellow-700 rounded-2xl shadow-lg p-6 text-white">
-            <div className="text-3xl mb-2">⏳</div>
-            <h3 className="text-3xl font-bold mb-1">{stats.pending}</h3>
-            <p className="text-yellow-100">Pending Review</p>
+          <div className="bg-gradient-to-br from-yellow-500 to-yellow-700 rounded-2xl shadow-lg p-5 text-white">
+            <Clock className="h-8 w-8 mb-2 opacity-90" />
+            <h3 className="text-3xl font-bold">{stats.pending}</h3>
+            <p className="text-sm text-yellow-100">Pending Review</p>
           </div>
 
-          <div className="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-2xl shadow-lg p-6 text-white">
-            <div className="text-3xl mb-2">👀</div>
-            <h3 className="text-3xl font-bold mb-1">{stats.reviewed}</h3>
-            <p className="text-indigo-100">Reviewed</p>
+          <div className="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-2xl shadow-lg p-5 text-white">
+            <Eye className="h-8 w-8 mb-2 opacity-90" />
+            <h3 className="text-3xl font-bold">{stats.reviewed}</h3>
+            <p className="text-sm text-indigo-100">Reviewed</p>
           </div>
 
-          <div className="bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl shadow-lg p-6 text-white">
-            <div className="text-3xl mb-2">⭐</div>
-            <h3 className="text-3xl font-bold mb-1">{stats.shortlisted}</h3>
-            <p className="text-purple-100">Shortlisted</p>
+          <div className="bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl shadow-lg p-5 text-white">
+            <Star className="h-8 w-8 mb-2 opacity-90" />
+            <h3 className="text-3xl font-bold">{stats.shortlisted}</h3>
+            <p className="text-sm text-purple-100">Shortlisted</p>
           </div>
 
-          <div className="bg-gradient-to-br from-pink-500 to-pink-700 rounded-2xl shadow-lg p-6 text-white">
-            <div className="text-3xl mb-2">👁️</div>
-            <h3 className="text-3xl font-bold mb-1">{stats.totalViews}</h3>
-            <p className="text-pink-100">Total Views</p>
+          <div className="bg-gradient-to-br from-pink-500 to-pink-700 rounded-2xl shadow-lg p-5 text-white">
+            <TrendingUp className="h-8 w-8 mb-2 opacity-90" />
+            <h3 className="text-3xl font-bold">{stats.totalViews}</h3>
+            <p className="text-sm text-pink-100">Total Views</p>
           </div>
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
           <Link
             href="/company/post-job"
-            className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+            className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white p-5 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 text-center"
           >
-            <div className="text-4xl mb-3">📝</div>
-            <h3 className="text-xl font-bold mb-1">Post New Job</h3>
-            <p className="text-sm opacity-90">Create a job listing</p>
+            <PlusCircle className="h-8 w-8 mx-auto mb-2" />
+            <h3 className="font-bold">Post New Job</h3>
+            <p className="text-xs opacity-90">Create a job listing</p>
           </Link>
           
           <Link
             href="/company/funds"
-            className="bg-gradient-to-r from-purple-500 to-purple-700 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+            className="bg-gradient-to-r from-purple-500 to-purple-700 text-white p-5 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 text-center"
           >
-            <div className="text-4xl mb-3">💰</div>
-            <h3 className="text-xl font-bold mb-1">Buy Credits</h3>
-            <p className="text-sm opacity-90">View CVs & upgrade plan</p>
+            <CreditCard className="h-8 w-8 mx-auto mb-2" />
+            <h3 className="font-bold">Buy Credits</h3>
+            <p className="text-xs opacity-90">View CVs & upgrade plan</p>
           </Link>
           
           <Link
             href="/company/complaints"
-            className="bg-gradient-to-r from-red-500 to-red-700 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+            className="bg-gradient-to-r from-red-500 to-red-700 text-white p-5 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 text-center"
           >
-            <div className="text-4xl mb-3">⚠️</div>
-            <h3 className="text-xl font-bold mb-1">Complaints</h3>
-            <p className="text-sm opacity-90">Report an issue</p>
+            <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
+            <h3 className="font-bold">Complaints</h3>
+            <p className="text-xs opacity-90">Report an issue</p>
           </Link>
           
           <Link
             href="/company/settings"
-            className="bg-gradient-to-r from-gray-600 to-gray-800 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+            className="bg-gradient-to-r from-gray-600 to-gray-800 text-white p-5 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 text-center"
           >
-            <div className="text-4xl mb-3">⚙️</div>
-            <h3 className="text-xl font-bold mb-1">Settings</h3>
-            <p className="text-sm opacity-90">Profile & preferences</p>
+            <Settings className="h-8 w-8 mx-auto mb-2" />
+            <h3 className="font-bold">Settings</h3>
+            <p className="text-xs opacity-90">Profile & preferences</p>
           </Link>
         </div>
 
         {/* Recent Applications */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-12">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">📬 Recent Applications</h2>
+          <div className="flex items-center gap-2 mb-6">
+            <Users className="h-6 w-6 text-cyan-600" />
+            <h2 className="text-2xl font-bold text-gray-800">Recent Applications</h2>
+          </div>
           {recentApps.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No applications yet</p>
+            <div className="text-center py-8">
+              <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500">No applications yet</p>
+            </div>
           ) : (
             <div className="space-y-4">
               {recentApps.map(app => (
-                <div key={app.id} className="flex justify-between items-center border-b pb-3 hover:bg-gray-50 p-2 rounded-lg transition">
+                <div key={app.id} className="flex justify-between items-center border-b pb-3 hover:bg-gray-50 p-3 rounded-lg transition">
                   <div>
-                    <p className="font-semibold text-gray-800">{app.name}</p>
+                    <p className="font-semibold text-gray-800 flex items-center gap-2">
+                      {app.name}
+                      {app.status === 'pending' && <Clock className="h-4 w-4 text-yellow-500" />}
+                      {app.status === 'reviewed' && <Eye className="h-4 w-4 text-blue-500" />}
+                      {app.status === 'shortlisted' && <Star className="h-4 w-4 text-green-500" />}
+                    </p>
                     <p className="text-sm text-gray-500">for {app.jobTitle}</p>
                     <span className={`text-xs px-2 py-1 rounded-full inline-block mt-1 ${
                       app.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
@@ -354,9 +393,9 @@ export default function CompanyDashboard() {
                   </div>
                   <Link
                     href={`/company/applicants/${app.id}`}
-                    className="bg-blue-100 text-blue-600 px-3 py-2 rounded-lg text-sm hover:bg-blue-200 transition"
+                    className="bg-blue-100 text-blue-600 px-3 py-2 rounded-lg text-sm hover:bg-blue-200 transition flex items-center gap-1"
                   >
-                    View
+                    View <ChevronRight className="h-4 w-4" />
                   </Link>
                 </div>
               ))}
@@ -367,25 +406,29 @@ export default function CompanyDashboard() {
         {/* My Posted Jobs */}
         <div>
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-3xl font-bold text-gray-800">📋 My Posted Jobs</h2>
+            <div className="flex items-center gap-2">
+              <Briefcase className="h-7 w-7 text-gray-700" />
+              <h2 className="text-3xl font-bold text-gray-800">My Posted Jobs</h2>
+            </div>
             <Link
               href="/company/jobs"
-              className="text-cyan-600 hover:text-cyan-800 font-medium"
+              className="text-cyan-600 hover:text-cyan-800 font-medium flex items-center gap-1"
             >
-              View All →
+              View All <ChevronRight className="h-4 w-4" />
             </Link>
           </div>
 
           {jobs.length === 0 ? (
             <div className="bg-white rounded-2xl shadow-lg p-16 text-center">
-              <div className="text-6xl mb-4">📭</div>
+              <Briefcase className="h-16 w-16 text-gray-300 mx-auto mb-4" />
               <p className="text-xl text-gray-500 mb-4">
                 You haven't posted any jobs yet.
               </p>
               <Link
                 href="/company/post-job"
-                className="inline-block bg-gradient-to-r from-cyan-600 to-blue-700 text-white font-bold text-lg px-8 py-4 rounded-xl hover:from-cyan-700 hover:to-blue-800 transition shadow-lg"
+                className="inline-block bg-gradient-to-r from-cyan-600 to-blue-700 text-white font-bold text-lg px-8 py-4 rounded-xl hover:from-cyan-700 hover:to-blue-800 transition shadow-lg flex items-center gap-2 mx-auto w-fit"
               >
+                <PlusCircle className="h-5 w-5" />
                 Post Your First Job
               </Link>
             </div>
@@ -398,31 +441,48 @@ export default function CompanyDashboard() {
                 >
                   <div className="p-6">
                     <div className="flex justify-between items-start mb-3">
-                      <h3 className="text-xl font-bold text-gray-800 truncate">{job.title}</h3>
+                      <h3 className="text-xl font-bold text-gray-800 truncate flex items-center gap-2">
+                        <Briefcase className="h-5 w-5 text-cyan-600" />
+                        {job.title}
+                      </h3>
                       <span className={`px-2 py-1 rounded-full text-xs font-bold ${
                         job.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                       }`}>
-                        {job.status || 'active'}
+                        {job.status === 'active' ? (
+                          <span className="flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Active</span>
+                        ) : (
+                          <span className="flex items-center gap-1"><XCircle className="h-3 w-3" /> Closed</span>
+                        )}
                       </span>
                     </div>
                     
-                    <p className="text-gray-600 mb-2 font-medium">{job.companyName}</p>
+                    <p className="text-gray-600 mb-2 font-medium flex items-center gap-1">
+                      <Building2 className="h-4 w-4" />
+                      {job.companyName}
+                    </p>
 
                     <div className="flex flex-wrap gap-2 mb-4">
-                      <span className="bg-cyan-100 text-cyan-800 px-3 py-1 rounded-full text-xs font-medium">
+                      <span className="bg-cyan-100 text-cyan-800 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
                         {job.location || "Karachi"}
                       </span>
-                      <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs font-medium">
+                      <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                        <Briefcase className="h-3 w-3" />
                         {job.type || "Full Time"}
                       </span>
-                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold">
+                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                        <DollarSign className="h-3 w-3" />
                         {job.salary || "Negotiable"}
                       </span>
                     </div>
 
                     <div className="flex justify-between text-sm text-gray-500 mb-4">
-                      <span>👁️ {job.views || 0} views</span>
-                      <span>📝 {job.applicantsCount || 0} applicants</span>
+                      <span className="flex items-center gap-1">
+                        <Eye className="h-4 w-4" /> {job.views || 0} views
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Users className="h-4 w-4" /> {job.applicantsCount || 0} applicants
+                      </span>
                     </div>
 
                     <p className="text-gray-600 mb-5 line-clamp-2 text-sm">
@@ -433,34 +493,39 @@ export default function CompanyDashboard() {
                     <div className="grid grid-cols-2 gap-2">
                       <Link
                         href={`/company/edit-job/${job.id}`}
-                        className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition transform hover:scale-105 shadow flex items-center justify-center gap-1"
+                        className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition flex items-center justify-center gap-1"
                       >
-                        ✏️ Edit
+                        <Edit className="h-4 w-4" />
+                        Edit
                       </Link>
                       
                       <button
                         onClick={() => handleDelete(job.id)}
-                        className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition transform hover:scale-105 shadow flex items-center justify-center gap-1"
+                        className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition flex items-center justify-center gap-1"
                       >
-                        🗑️ Delete
+                        <Trash2 className="h-4 w-4" />
+                        Delete
                       </button>
                       
                       <Link
                         href={`/jobs/${job.id}`}
-                        className="bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition transform hover:scale-105 shadow flex items-center justify-center gap-1"
+                        className="bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition flex items-center justify-center gap-1"
                       >
-                        👁️ View
+                        <ExternalLink className="h-4 w-4" />
+                        View
                       </Link>
                       
                       <Link
                         href={`/company/applicants/${job.id}`}
-                        className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition transform hover:scale-105 shadow flex items-center justify-center gap-1"
+                        className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition flex items-center justify-center gap-1"
                       >
-                        👥 Applicants
+                        <Users className="h-4 w-4" />
+                        Applicants
                       </Link>
                     </div>
 
-                    <p className="text-xs text-gray-400 mt-4 text-right">
+                    <p className="text-xs text-gray-400 mt-4 text-right flex items-center justify-end gap-1">
+                      <Calendar className="h-3 w-3" />
                       Posted: {job.createdAt ? new Date(job.createdAt.toDate?.() || job.createdAt).toLocaleDateString('en-PK', {
                         year: 'numeric',
                         month: 'short',

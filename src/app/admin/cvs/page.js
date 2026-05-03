@@ -1,0 +1,357 @@
+// src/app/admin/cvs/page.js
+"use client";
+
+import { useState, useEffect } from "react";
+import { db } from "@/lib/firebase";
+import { 
+  collection, getDocs, doc, updateDoc, deleteDoc,
+  query, where, orderBy 
+} from "firebase/firestore";
+import toast from 'react-hot-toast';
+import { 
+  FileText, Search, CheckCircle, XCircle, 
+  Eye, Trash2, Clock, User, Mail, Phone, MapPin,
+  Download, Filter
+} from "lucide-react";
+
+export default function AdminCVs() {
+  const [applications, setApplications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
+  const [selectedApp, setSelectedApp] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    fetchApplications();
+  }, []);
+
+  const fetchApplications = async () => {
+    try {
+      setLoading(true);
+      const appsSnap = await getDocs(collection(db, "applications"));
+      const appsList = await Promise.all(appsSnap.docs.map(async (docSnap) => {
+        const data = docSnap.data();
+        // Get job title
+        let jobTitle = 'Unknown Job';
+        try {
+          const jobDoc = await getDoc(doc(db, "jobs", data.jobId));
+          if (jobDoc.exists()) {
+            jobTitle = jobDoc.data().title;
+          }
+        } catch (err) {
+          console.error("Error fetching job:", err);
+        }
+        
+        return {
+          id: docSnap.id,
+          ...data,
+          jobTitle,
+          appliedAt: data.appliedAt?.toDate?.() || data.createdAt?.toDate?.() || new Date()
+        };
+      }));
+      
+      setApplications(appsList);
+      
+      setStats({
+        total: appsList.length,
+        pending: appsList.filter(a => a.cvStatus === 'pending' || !a.cvStatus).length,
+        approved: appsList.filter(a => a.cvStatus === 'approved').length,
+        rejected: appsList.filter(a => a.cvStatus === 'rejected').length
+      });
+      
+    } catch (error) {
+      console.error("Error fetching applications:", error);
+      toast.error("Failed to load applications");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApprove = async (appId) => {
+    try {
+      await updateDoc(doc(db, "applications", appId), {
+        cvStatus: 'approved',
+        cvApprovedAt: new Date(),
+        cvApprovedBy: 'admin'
+      });
+      
+      setApplications(applications.map(app => 
+        app.id === appId ? { ...app, cvStatus: 'approved' } : app
+      ));
+      
+      toast.success("CV approved!");
+    } catch (error) {
+      console.error("Error approving CV:", error);
+      toast.error("Failed to approve CV");
+    }
+  };
+
+  const handleReject = async (appId) => {
+    const reason = prompt("Please enter reason for CV rejection:");
+    if (!reason) return;
+    
+    try {
+      await updateDoc(doc(db, "applications", appId), {
+        cvStatus: 'rejected',
+        cvRejectionReason: reason,
+        cvRejectedAt: new Date()
+      });
+      
+      setApplications(applications.map(app => 
+        app.id === appId ? { ...app, cvStatus: 'rejected', cvRejectionReason: reason } : app
+      ));
+      
+      toast.success("CV rejected");
+    } catch (error) {
+      console.error("Error rejecting CV:", error);
+      toast.error("Failed to reject CV");
+    }
+  };
+
+  const handleDelete = async (appId) => {
+    if (!confirm("Are you sure you want to delete this application?")) return;
+    
+    try {
+      await deleteDoc(doc(db, "applications", appId));
+      setApplications(applications.filter(app => app.id !== appId));
+      toast.success("Application deleted");
+    } catch (error) {
+      console.error("Error deleting application:", error);
+      toast.error("Failed to delete");
+    }
+  };
+
+  const viewCV = (cvUrl) => {
+    if (cvUrl) {
+      window.open(cvUrl, '_blank');
+    } else {
+      toast.error("No CV uploaded");
+    }
+  };
+
+  const filteredApps = applications.filter(app => {
+    if (filter === 'pending' && app.cvStatus === 'approved') return false;
+    if (filter === 'approved' && app.cvStatus !== 'approved') return false;
+    if (filter === 'rejected' && app.cvStatus !== 'rejected') return false;
+    
+    if (searchTerm) {
+      return app.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             app.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             app.jobTitle?.toLowerCase().includes(searchTerm.toLowerCase());
+    }
+    
+    return true;
+  });
+
+  const getStatusBadge = (status) => {
+    if (!status || status === 'pending') {
+      return { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Pending', icon: Clock };
+    } else if (status === 'approved') {
+      return { bg: 'bg-green-100', text: 'text-green-700', label: 'Approved', icon: CheckCircle };
+    } else {
+      return { bg: 'bg-red-100', text: 'text-red-700', label: 'Rejected', icon: XCircle };
+    }
+  };
+
+  const ViewModal = ({ app, onClose }) => {
+    if (!app) return null;
+    
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+            <h2 className="text-xl font-bold">Application Details</h2>
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">✕</button>
+          </div>
+          <div className="p-6 space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold">{app.name}</h3>
+              <p className="text-gray-600">{app.jobTitle}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center gap-2 text-gray-600">
+                <Mail className="h-4 w-4" /> {app.email}
+              </div>
+              <div className="flex items-center gap-2 text-gray-600">
+                <Phone className="h-4 w-4" /> {app.phone || 'N/A'}
+              </div>
+              <div className="flex items-center gap-2 text-gray-600">
+                <MapPin className="h-4 w-4" /> {app.city || 'N/A'}
+              </div>
+              <div className="flex items-center gap-2 text-gray-600">
+                <Clock className="h-4 w-4" /> Applied: {app.appliedAt?.toLocaleDateString()}
+              </div>
+            </div>
+            {app.coverLetter && (
+              <div>
+                <p className="font-medium mb-2">Cover Letter:</p>
+                <p className="text-gray-600 bg-gray-50 p-3 rounded-lg">{app.coverLetter}</p>
+              </div>
+            )}
+            {app.cvUrl && (
+              <button
+                onClick={() => viewCV(app.cvUrl)}
+                className="bg-cyan-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" /> Download CV
+              </button>
+            )}
+            {app.cvRejectionReason && (
+              <div className="bg-red-50 p-3 rounded-lg">
+                <p className="text-sm text-red-700"><strong>Rejection Reason:</strong> {app.cvRejectionReason}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-800">CV Approval</h1>
+        <p className="text-gray-500 mt-1">Review and approve candidate CVs</p>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="bg-gray-50 rounded-xl p-4 text-center">
+          <p className="text-2xl font-bold">{stats.total}</p>
+          <p className="text-sm text-gray-500">Total CVs</p>
+        </div>
+        <div className="bg-yellow-50 rounded-xl p-4 text-center">
+          <p className="text-2xl font-bold text-yellow-700">{stats.pending}</p>
+          <p className="text-sm text-yellow-600">Pending</p>
+        </div>
+        <div className="bg-green-50 rounded-xl p-4 text-center">
+          <p className="text-2xl font-bold text-green-700">{stats.approved}</p>
+          <p className="text-sm text-green-600">Approved</p>
+        </div>
+        <div className="bg-red-50 rounded-xl p-4 text-center">
+          <p className="text-2xl font-bold text-red-700">{stats.rejected}</p>
+          <p className="text-sm text-red-600">Rejected</p>
+        </div>
+      </div>
+
+      {/* Search & Filter */}
+      <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by name, email or job..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-cyan-500"
+            />
+          </div>
+          <div className="flex gap-2">
+            {['all', 'pending', 'approved', 'rejected'].map(f => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-4 py-2 rounded-lg capitalize transition ${
+                  filter === f ? 'bg-cyan-600 text-white' : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* CVs List */}
+      <div className="space-y-4">
+        {filteredApps.map((app) => {
+          const StatusBadge = getStatusBadge(app.cvStatus);
+          const StatusIcon = StatusBadge.icon;
+          
+          return (
+            <div key={app.id} className="bg-white rounded-2xl shadow-lg p-6">
+              <div className="flex flex-col md:flex-row justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-purple-100 p-2 rounded-xl">
+                      <FileText className="h-6 w-6 text-purple-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-800">{app.name}</h3>
+                      <p className="text-gray-600">Applied for: {app.jobTitle}</p>
+                      <div className="flex flex-wrap gap-3 mt-2">
+                        <span className="flex items-center gap-1 text-sm text-gray-500">
+                          <Mail className="h-4 w-4" /> {app.email}
+                        </span>
+                        <span className="flex items-center gap-1 text-sm text-gray-500">
+                          <Clock className="h-4 w-4" /> {app.appliedAt?.toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-end gap-3">
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 ${StatusBadge.bg} ${StatusBadge.text}`}>
+                    <StatusIcon className="h-4 w-4" />
+                    {StatusBadge.label}
+                  </span>
+
+                  {(!app.cvStatus || app.cvStatus === 'pending') && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleApprove(app.id)}
+                        className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm flex items-center gap-1"
+                      >
+                        <CheckCircle className="h-4 w-4" /> Approve
+                      </button>
+                      <button
+                        onClick={() => handleReject(app.id)}
+                        className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm flex items-center gap-1"
+                      >
+                        <XCircle className="h-4 w-4" /> Reject
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setSelectedApp(app);
+                        setShowModal(true);
+                      }}
+                      className="text-cyan-600 text-sm flex items-center gap-1"
+                    >
+                      <Eye className="h-4 w-4" /> Details
+                    </button>
+                    <button
+                      onClick={() => handleDelete(app.id)}
+                      className="text-red-600 text-sm flex items-center gap-1"
+                    >
+                      <Trash2 className="h-4 w-4" /> Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Modal */}
+      {showModal && <ViewModal app={selectedApp} onClose={() => setShowModal(false)} />}
+    </div>
+  );
+}
