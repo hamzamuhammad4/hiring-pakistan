@@ -1,4 +1,4 @@
-// src/app/admin/layout.js - SIMPLIFIED VERSION
+// src/app/admin/layout.js
 "use client";
 
 import { useState, useEffect } from "react";
@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 import { 
   LayoutDashboard, Building2, Briefcase, FileText, 
   CreditCard, AlertTriangle, Newspaper, Settings, 
-  LogOut, CheckCircle, Menu, X 
+  LogOut, CheckCircle, Menu, X, Layers
 } from "lucide-react";
 
 const adminEmails = [
@@ -23,6 +23,23 @@ export default function AdminLayout({ children }) {
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+
+  // ✅ Add a style to hide footer when admin layout is mounted
+  useEffect(() => {
+    // Hide footer when admin page loads
+    const footer = document.querySelector('footer');
+    if (footer) {
+      footer.style.display = 'none';
+    }
+    
+    return () => {
+      // Show footer again when leaving admin page
+      const footer = document.querySelector('footer');
+      if (footer) {
+        footer.style.display = 'block';
+      }
+    };
+  }, []);
 
   useEffect(() => {
     // Login page ke liye layout skip karo
@@ -66,6 +83,7 @@ export default function AdminLayout({ children }) {
   const navItems = [
     { path: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { path: "/admin/companies", label: "Companies", icon: Building2 },
+    { path: "/admin/subscriptions", label: "Subscriptions", icon: Layers },
     { path: "/admin/jobs", label: "Jobs Approval", icon: Briefcase },
     { path: "/admin/cvs", label: "CV Approval", icon: FileText },
     { path: "/admin/payments", label: "Payments", icon: CreditCard },
@@ -105,24 +123,25 @@ export default function AdminLayout({ children }) {
       </button>
 
       {/* Sidebar */}
-      <aside className={`fixed top-20 left-0 z-40 h-screen w-64 bg-gradient-to-b from-gray-900 to-gray-800 text-white transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      <aside className={`fixed top-0 left-0 z-40 h-screen w-64 bg-gradient-to-b from-gray-900 to-gray-800 text-white transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="p-6 border-b border-gray-700">
-          {/* <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Briefcase className="h-6 w-6" />
+          <h3 className="text-xl font-bold flex items-center gap-2">
             Hiring Pakistan
-          </h1> */}
+          </h3>
           <p className="text-sm text-gray-400 mt-1">Admin Portal</p>
         </div>
 
         <nav className="p-4 space-y-2">
           {navItems.map((item) => {
-            const isActive = pathname === item.path;
+            const isActive = pathname === item.path || pathname?.startsWith(item.path + '/');
             return (
               <Link
                 key={item.path}
                 href={item.path}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${isActive ? 'bg-cyan-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                  isActive ? 'bg-cyan-600 text-white' : 'text-gray-300 hover:bg-gray-700'
+                }`}
               >
                 <item.icon className="h-5 w-5" />
                 <span>{item.label}</span>
@@ -133,7 +152,10 @@ export default function AdminLayout({ children }) {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700">
-          <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-red-400 hover:bg-red-900/30 transition">
+          <button 
+            onClick={handleLogout} 
+            className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-red-400 hover:bg-red-900/30 transition"
+          >
             <LogOut className="h-5 w-5" />
             <span>Logout</span>
           </button>

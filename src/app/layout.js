@@ -2,16 +2,15 @@
 import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";  // ✅ Import Footer
 import { Toaster } from 'react-hot-toast';
 
-// Inter font - body ke liye (clean, readable)
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
   display: "swap",
 });
 
-// Outfit font - headings ke liye (bold, modern)
 const outfit = Outfit({
   subsets: ["latin"],
   variable: "--font-outfit",
@@ -26,9 +25,10 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${inter.variable} ${outfit.variable}`}>
-      <body className="bg-gray-50 font-sans antialiased">
+      <body className="bg-gray-50 font-sans antialiased flex flex-col min-h-screen">
         <Navbar />
-        <main>{children}</main>
+        <main className="flex-1">{children}</main>
+        <Footer />  {/* ✅ Footer Add Kiya */}
         <Toaster 
           position="top-right" 
           toastOptions={{

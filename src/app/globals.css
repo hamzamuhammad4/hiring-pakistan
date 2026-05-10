@@ -60,3 +60,19 @@ html {
   background-color: #0891b2;
   color: white;
 }
+
+/* Footer Responsive Fixes */
+@media (max-width: 768px) {
+  footer .grid {
+    gap: 2rem;
+  }
+  
+  footer input[type="email"] {
+    width: 100%;
+  }
+}
+
+/* Smooth hover transitions */
+footer a, footer button {
+  transition: all 0.3s ease;
+}
