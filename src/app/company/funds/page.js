@@ -2,44 +2,58 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { db, storage } from "@/lib/firebase";
-import { doc, getDoc, updateDoc, increment, addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { auth, db, storage } from "@/lib/firebase";
+import { 
+  doc, getDoc, updateDoc, increment, addDoc, 
+  collection, serverTimestamp 
+} from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import toast from 'react-hot-toast';
 import { 
   CreditCard, Building2, Coins, Zap, CheckCircle,
-  Upload, Banknote, Phone, Landmark, AlertCircle
+  Upload, Banknote, Phone, Landmark, AlertCircle,
+  Copy, ExternalLink
 } from "lucide-react";
 
-// Payment Methods
+// ✅ YOUR BANK DETAILS
 const PAYMENT_METHODS = [
+  { 
+    id: 'ubl', 
+    name: 'UBL Bank', 
+    icon: Landmark,
+    accountTitle: 'Faaiz Ahmed',
+    accountNumber: '0523269421529',
+    iban: 'PK14UNIL0109000269421529',
+    instructions: 'Transfer amount to above UBL account and upload screenshot'
+  },
   { 
     id: 'easypaisa', 
     name: 'EasyPaisa', 
     icon: Phone,
-    accountTitle: 'Hiring Pakistan',
-    accountNumber: '03XXXXXXXXX',
+    accountTitle: 'Faaiz Ahmed',
+    accountNumber: '03482350367',
+    iban: 'PK33TMFB0000000045189036',
     instructions: 'Send payment to above EasyPaisa number and upload screenshot'
   },
   { 
     id: 'jazzcash', 
     name: 'JazzCash', 
     icon: Phone,
-    accountTitle: 'Hiring Pakistan',
-    accountNumber: '03XXXXXXXXX',
+    accountTitle: 'Faaiz Ahmed',
+    accountNumber: '03482350367',
+    iban: 'PK32JCMA1302923482350367',
     instructions: 'Send payment to above JazzCash number and upload screenshot'
   },
   { 
-    id: 'bank', 
-    name: 'Bank Transfer', 
-    icon: Landmark,
-    accountTitle: 'Hiring Pakistan (Pvt) Ltd',
-    accountNumber: '1234-567890-01',
-    bankName: 'Bank Alfalah',
-    branchCode: '0123',
-    instructions: 'Transfer amount to above bank account and upload screenshot'
+    id: 'sadapay', 
+    name: 'Sadapay', 
+    icon: CreditCard,
+    accountTitle: 'Faaiz Ahmed',
+    accountNumber: '03482350367',
+    iban: 'PK70SADA0000003482350367',
+    instructions: 'Send payment to above Sadapay account and upload screenshot'
   }
 ];
 
@@ -51,7 +65,7 @@ const PLANS = [
     price: 0,
     credits: 5,
     popular: false,
-    features: ['Post up to 3 jobs', '5 CV views', 'Basic support']
+    features: ['📋 Post up to 3 jobs', '👁️ 5 CV views', '💬 Basic support']
   },
   {
     id: 'standard',
@@ -59,7 +73,7 @@ const PLANS = [
     price: 500,
     credits: 50,
     popular: true,
-    features: ['Post up to 10 jobs', '50 CV views', 'Priority support', 'Job featured for 3 days']
+    features: ['📋 Post up to 10 jobs', '👁️ 50 CV views', '⚡ Priority support', '⭐ Job featured for 3 days']
   },
   {
     id: 'premium',
@@ -67,15 +81,15 @@ const PLANS = [
     price: 1000,
     credits: 200,
     popular: false,
-    features: ['Unlimited job posts', '200 CV views', '24/7 priority support', 'Job featured for 7 days']
+    features: ['📋 Unlimited job posts', '👁️ 200 CV views', '🕐 24/7 priority support', '⭐ Job featured for 7 days']
   }
 ];
 
 const CREDIT_PACKS = [
-  { id: 'small', credits: 10, price: 100, label: 'Small Pack' },
+  { id: 'small', credits: 10, price: 100, label: 'Small Pack', popular: false },
   { id: 'medium', credits: 25, price: 225, label: 'Medium Pack', popular: true },
-  { id: 'large', credits: 50, price: 400, label: 'Large Pack' },
-  { id: 'xlarge', credits: 100, price: 750, label: 'Extra Large Pack' },
+  { id: 'large', credits: 50, price: 400, label: 'Large Pack', popular: false },
+  { id: 'xlarge', credits: 100, price: 750, label: 'Extra Large Pack', popular: false },
 ];
 
 export default function FundsPage() {
@@ -90,6 +104,7 @@ export default function FundsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentStep, setPaymentStep] = useState(1);
+  const [copiedField, setCopiedField] = useState(null);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -105,7 +120,7 @@ export default function FundsPage() {
         if (companySnap.exists()) {
           setCompanyData(companySnap.data());
         } else {
-          await setDoc(companyRef, {
+          await updateDoc(companyRef, {
             credits: 5,
             plan: 'Basic',
             email: user.email,
@@ -126,13 +141,15 @@ export default function FundsPage() {
 
   const handlePlanSelect = (plan) => {
     if (plan.price === 0) {
-      // Free plan - just switch
       handleFreePlanSwitch(plan);
     } else {
       setSelectedPlan(plan);
       setSelectedPack(null);
       setShowPaymentModal(true);
       setPaymentStep(1);
+      setSelectedPaymentMethod(null);
+      setScreenshot(null);
+      setScreenshotPreview(null);
     }
   };
 
@@ -141,6 +158,9 @@ export default function FundsPage() {
     setSelectedPlan(null);
     setShowPaymentModal(true);
     setPaymentStep(1);
+    setSelectedPaymentMethod(null);
+    setScreenshot(null);
+    setScreenshotPreview(null);
   };
 
   const handleFreePlanSwitch = async (plan) => {
@@ -159,6 +179,13 @@ export default function FundsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const copyToClipboard = (text, field) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    toast.success(`${field} copied!`);
+    setTimeout(() => setCopiedField(null), 2000);
   };
 
   const handleScreenshotChange = (e) => {
@@ -218,8 +245,9 @@ export default function FundsPage() {
         creditsToAdd: creditsToAdd,
         amount: amount,
         paymentMethod: selectedPaymentMethod.id,
+        paymentMethodName: selectedPaymentMethod.name,
         screenshotUrl: screenshotUrl,
-        status: 'pending', // pending, approved, rejected
+        status: 'pending',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         notes: ''
@@ -270,10 +298,11 @@ export default function FundsPage() {
             {/* Step 1: Select Payment Method */}
             {paymentStep === 1 && (
               <>
-                <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white p-4 rounded-lg">
                   <p className="font-semibold mb-2">Payment Summary</p>
-                  <p className="text-2xl font-bold text-blue-600">Rs {selectedItem.price}</p>
-                  <p className="text-sm text-gray-600">{selectedItem.credits} credits</p>
+                  <p className="text-3xl font-bold">Rs {selectedItem.price.toLocaleString()}</p>
+                  <p className="text-sm opacity-90">{selectedItem.credits} credits will be added</p>
+                  {selectedPlan && <p className="text-sm opacity-90 mt-1">Plan: {selectedPlan.name}</p>}
                 </div>
 
                 <div>
@@ -306,7 +335,7 @@ export default function FundsPage() {
                 <button
                   onClick={() => setPaymentStep(2)}
                   disabled={!selectedPaymentMethod}
-                  className="w-full bg-cyan-600 text-white py-3 rounded-xl font-semibold disabled:bg-gray-300"
+                  className="w-full bg-cyan-600 text-white py-3 rounded-xl font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed"
                 >
                   Continue
                 </button>
@@ -322,11 +351,37 @@ export default function FundsPage() {
                     <p className="font-semibold text-yellow-800">Send payment to:</p>
                   </div>
                   
-                  <div className="space-y-2 text-sm">
-                    <p><strong>Account Title:</strong> {method.accountTitle}</p>
-                    <p><strong>Account Number:</strong> {method.accountNumber}</p>
-                    {method.bankName && <p><strong>Bank:</strong> {method.bankName}</p>}
-                    {method.branchCode && <p><strong>Branch Code:</strong> {method.branchCode}</p>}
+                  <div className="space-y-3">
+                    <div className="bg-white p-3 rounded-lg">
+                      <p className="text-xs text-gray-500">Account Title</p>
+                      <p className="font-mono font-semibold">{method.accountTitle}</p>
+                    </div>
+                    
+                    <div className="bg-white p-3 rounded-lg">
+                      <p className="text-xs text-gray-500">Account Number</p>
+                      <div className="flex justify-between items-center">
+                        <p className="font-mono font-semibold">{method.accountNumber}</p>
+                        <button 
+                          onClick={() => copyToClipboard(method.accountNumber, 'Account Number')}
+                          className="text-cyan-600 hover:text-cyan-800"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white p-3 rounded-lg">
+                      <p className="text-xs text-gray-500">IBAN</p>
+                      <div className="flex justify-between items-center">
+                        <p className="font-mono text-sm">{method.iban}</p>
+                        <button 
+                          onClick={() => copyToClipboard(method.iban, 'IBAN')}
+                          className="text-cyan-600 hover:text-cyan-800"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                   
                   <div className="mt-3 pt-3 border-t border-yellow-200">
@@ -336,26 +391,26 @@ export default function FundsPage() {
 
                 <div>
                   <label className="block font-semibold mb-2">Upload Payment Screenshot</label>
-                  <div className="border-2 border-dashed rounded-xl p-4 text-center">
+                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-cyan-500 transition">
                     {screenshotPreview ? (
                       <div>
-                        <img src={screenshotPreview} alt="Screenshot" className="max-h-48 mx-auto mb-2 rounded" />
+                        <img src={screenshotPreview} alt="Screenshot" className="max-h-48 mx-auto mb-2 rounded-lg" />
                         <button
                           type="button"
                           onClick={() => {
                             setScreenshot(null);
                             setScreenshotPreview(null);
                           }}
-                          className="text-red-600 text-sm"
+                          className="text-red-600 text-sm hover:underline"
                         >
                           Remove
                         </button>
                       </div>
                     ) : (
                       <label className="cursor-pointer block">
-                        <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                        <Upload className="h-10 w-10 text-gray-400 mx-auto mb-2" />
                         <p className="text-gray-500">Click to upload screenshot</p>
-                        <p className="text-xs text-gray-400">JPG, PNG, PDF (Max 5MB)</p>
+                        <p className="text-xs text-gray-400 mt-1">JPG, PNG, PDF (Max 5MB)</p>
                         <input
                           type="file"
                           accept="image/*,application/pdf"
@@ -369,17 +424,27 @@ export default function FundsPage() {
 
                 <div className="flex gap-3">
                   <button
-                    onClick={() => setPaymentStep(1)}
-                    className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold"
+                    onClick={() => {
+                      setPaymentStep(1);
+                      setSelectedPaymentMethod(null);
+                    }}
+                    className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-300"
                   >
                     Back
                   </button>
                   <button
                     onClick={handleSubmitPaymentRequest}
                     disabled={!screenshot || submitting}
-                    className="flex-1 bg-green-600 text-white py-3 rounded-xl font-semibold disabled:bg-gray-300"
+                    className="flex-1 bg-green-600 text-white py-3 rounded-xl font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    {submitting ? 'Submitting...' : 'Submit Payment Request'}
+                    {submitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                        Submitting...
+                      </>
+                    ) : (
+                      <>Submit Payment Request</>
+                    )}
                   </button>
                 </div>
               </>
@@ -393,78 +458,103 @@ export default function FundsPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-10 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
           <Link href="/company/dashboard" className="text-cyan-600 hover:underline mb-2 inline-block">
             ← Back to Dashboard
           </Link>
-          <div className="flex justify-between items-start">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-800">Buy Credits</h1>
               <p className="text-gray-600">Purchase credits to view candidate CVs</p>
             </div>
-            <div className="bg-purple-50 p-4 rounded-xl text-center">
-              <p className="text-sm text-purple-600">Your Balance</p>
-              <p className="text-2xl font-bold text-purple-700">{companyData?.credits || 0} Credits</p>
-              <p className="text-xs text-purple-500">Plan: {companyData?.plan || 'Basic'}</p>
+            <div className="bg-gradient-to-r from-purple-500 to-purple-700 text-white p-4 rounded-xl text-center">
+              <p className="text-sm opacity-90">Your Balance</p>
+              <p className="text-2xl font-bold">{companyData?.credits || 0} Credits</p>
+              <p className="text-xs opacity-80">Plan: {companyData?.plan || 'Basic'}</p>
             </div>
           </div>
         </div>
 
         {/* Plans */}
-        <h2 className="text-2xl font-bold mb-6">Subscription Plans</h2>
+        <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+          <Zap className="h-6 w-6 text-cyan-600" />
+          Subscription Plans
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           {PLANS.map((plan) => (
-            <div key={plan.id} className={`bg-white rounded-2xl shadow-lg p-6 ${plan.popular ? 'border-2 border-cyan-500 relative' : ''}`}>
+            <div 
+              key={plan.id} 
+              className={`bg-white rounded-2xl shadow-lg overflow-hidden transition hover:shadow-xl ${
+                plan.popular ? 'border-2 border-cyan-500 relative' : ''
+              }`}
+            >
               {plan.popular && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-cyan-500 text-white px-3 py-1 rounded-full text-xs">
-                  Most Popular
-                </span>
+                <div className="bg-cyan-500 text-white text-center py-2 text-sm font-bold">
+                  🔥 MOST POPULAR
+                </div>
               )}
-              <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
-              <p className="text-3xl font-bold text-cyan-600 mb-2">Rs {plan.price}</p>
-              <p className="text-sm text-gray-500 mb-4">{plan.credits} credits</p>
-              <ul className="space-y-2 mb-6">
-                {plan.features.map((feature, i) => (
-                  <li key={i} className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-green-500" /> {feature}
-                  </li>
-                ))}
-              </ul>
-              <button
-                onClick={() => handlePlanSelect(plan)}
-                className={`w-full py-2 rounded-lg font-semibold ${
-                  plan.name === companyData?.plan
-                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                    : 'bg-cyan-600 text-white hover:bg-cyan-700'
-                }`}
-                disabled={plan.name === companyData?.plan}
-              >
-                {plan.name === companyData?.plan ? 'Current Plan' : 'Select Plan'}
-              </button>
+              <div className="p-6">
+                <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
+                <p className="text-4xl font-bold text-cyan-600 mb-2">Rs {plan.price.toLocaleString()}</p>
+                <p className="text-sm text-gray-500 mb-4">{plan.credits} credits</p>
+                <ul className="space-y-2 mb-6">
+                  {plan.features.map((feature, i) => (
+                    <li key={i} className="flex items-center gap-2 text-sm text-gray-600">
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={() => handlePlanSelect(plan)}
+                  disabled={plan.name === companyData?.plan && plan.price === 0}
+                  className={`w-full py-3 rounded-xl font-semibold transition ${
+                    plan.name === companyData?.plan && plan.price === 0
+                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:from-cyan-700 hover:to-blue-700'
+                  }`}
+                >
+                  {plan.name === companyData?.plan && plan.price === 0 ? 'Current Plan' : 'Select Plan'}
+                </button>
+              </div>
             </div>
           ))}
         </div>
 
         {/* Credit Packs */}
-        <h2 className="text-2xl font-bold mb-6">Quick Credit Packs</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+          <Coins className="h-6 w-6 text-purple-600" />
+          Quick Credit Packs
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
           {CREDIT_PACKS.map((pack) => (
-            <div key={pack.id} className="bg-white rounded-xl shadow-md p-4 text-center">
-              {pack.popular && <span className="text-xs text-purple-600 font-semibold">Best Value</span>}
+            <div 
+              key={pack.id} 
+              className={`bg-white rounded-xl shadow-md p-5 text-center transition hover:shadow-lg ${
+                pack.popular ? 'border-2 border-purple-500 relative' : ''
+              }`}
+            >
+              {pack.popular && (
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-purple-500 text-white text-xs px-3 py-1 rounded-full">
+                  Best Value
+                </span>
+              )}
               <p className="text-2xl font-bold text-purple-600">{pack.credits} Credits</p>
-              <p className="text-gray-500 mb-3">Rs {pack.price}</p>
+              <p className="text-gray-500 mb-3">Rs {pack.price.toLocaleString()}</p>
               <button
                 onClick={() => handlePackSelect(pack)}
-                className="bg-purple-600 text-white px-4 py-2 rounded-lg w-full hover:bg-purple-700"
+                className="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition"
               >
                 Buy Now
               </button>
@@ -473,21 +563,39 @@ export default function FundsPage() {
         </div>
 
         {/* Info Box */}
-        <div className="mt-8 bg-blue-50 rounded-2xl p-6">
-          <div className="flex gap-3">
-            <div className="bg-blue-500 p-2 rounded-full h-10 w-10 flex items-center justify-center">
-              <CreditCard className="h-5 w-5 text-white" />
+        <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-6">
+          <div className="flex gap-4">
+            <div className="bg-blue-500 p-3 rounded-full h-12 w-12 flex items-center justify-center">
+              <CreditCard className="h-6 w-6 text-white" />
             </div>
             <div>
-              <p className="font-semibold">How it works?</p>
-              <p className="text-sm text-gray-600 mt-1">
-                1. Select a plan or credit pack<br />
-                2. Choose payment method (EasyPaisa/JazzCash/Bank Transfer)<br />
-                3. Send payment to our account<br />
-                4. Upload screenshot of payment<br />
-                5. Admin will verify within 24 hours<br />
-                6. Credits will be added to your account
-              </p>
+              <p className="font-semibold text-gray-800">📌 How it works?</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                <div className="flex items-start gap-2">
+                  <span className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">1</span>
+                  <p className="text-sm text-gray-600">Select a plan or credit pack</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">2</span>
+                  <p className="text-sm text-gray-600">Choose payment method (UBL/EasyPaisa/JazzCash/Sadapay)</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">3</span>
+                  <p className="text-sm text-gray-600">Send payment to our account</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">4</span>
+                  <p className="text-sm text-gray-600">Upload screenshot of payment</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">5</span>
+                  <p className="text-sm text-gray-600">Admin will verify within 24 hours</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">6</span>
+                  <p className="text-sm text-gray-600">Credits will be added to your account</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
