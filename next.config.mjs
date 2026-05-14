@@ -1,7 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
-  reactCompiler: true,
+  images: {
+    domains: ['hiringpakistan.co', 'localhost', 'firebasestorage.googleapis.com'],
+  },
+  output: 'standalone',
+  trailingSlash: false,
+  reactStrictMode: true,
 };
 
 export default nextConfig;

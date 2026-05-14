@@ -157,15 +157,15 @@ export default function Footer() {
               <li className="flex items-center gap-3">
                 <Mail className="h-5 w-5 text-cyan-500" />
                 <a href="mailto:info@hiringpakistan.com" className="text-gray-400 hover:text-cyan-500 transition">
-                  info@hiringpakistan.com
+                  info@hiringpakistan.co
                 </a>
               </li>
-              <li className="flex items-center gap-3">
+              {/* <li className="flex items-center gap-3">
                 <Clock className="h-5 w-5 text-cyan-500" />
                 <span className="text-gray-400 text-sm">
                   Mon - Fri: 9:00 AM - 6:00 PM
                 </span>
-              </li>
+              </li> */}
             </ul>
           </div>
         </div>
