@@ -109,11 +109,11 @@ export default function Footer() {
           <div>
             <h3 className="text-white font-bold text-lg mb-4">For Employers</h3>
             <ul className="space-y-2">
-              <li>
+              {/* <li>
                 <Link href="/company/register" className="text-gray-400 hover:text-cyan-500 transition flex items-center gap-1">
                   <ChevronRight className="h-4 w-4" /> Post a Job
                 </Link>
-              </li>
+              </li> */}
               <li>
                 <Link href="/company/login" className="text-gray-400 hover:text-cyan-500 transition flex items-center gap-1">
                   <ChevronRight className="h-4 w-4" /> Company Login

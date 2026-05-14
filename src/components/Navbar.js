@@ -1,18 +1,23 @@
 // src/components/Navbar.js
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { Menu, X, LayoutDashboard, LogOut, User } from "lucide-react";
+import { 
+  Briefcase, LogOut, LayoutDashboard, 
+  ChevronDown, Menu, X, User 
+} from "lucide-react";
 
 export default function Navbar() {
-  const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -24,84 +29,134 @@ export default function Navbar() {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleLogout = async () => {
     await signOut(auth);
     router.push("/");
+    setDropdownOpen(false);
     setIsOpen(false);
   };
 
-  // Admin panel mein navbar mat dikhao
-  const isAdminPage = pathname?.startsWith("/admin");
-  if (isAdminPage) {
+  // Admin panel mein navbar hide
+  if (pathname?.startsWith("/admin")) {
     return null;
   }
 
-  // Company dashboard ya other pages mein show karo with condition
+  // Get user initial for avatar
+  const getUserInitial = () => {
+    if (!user?.email) return "U";
+    return user.email.charAt(0).toUpperCase();
+  };
+
+  // Get display name (first part of email)
+  const getDisplayName = () => {
+    if (!user?.email) return "User";
+    return user.email.split('@')[0];
+  };
+
   return (
     <nav className="bg-white shadow-lg sticky top-0 z-50 border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-4">
+          
+          {/* Logo Only - No Text */}
+          <Link href="/" className="flex items-center">
             <Image 
               src="/logo.png" 
               alt="Hiring Pakistan" 
-              width={150} 
-              height={150} 
-              priority 
-              className="rounded-lg"
+              width={140} 
+              height={140} 
+              priority
+              className="rounded-lg object-contain"
             />
           </Link>
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-8">
             <Link 
               href="/jobs" 
-              className="text-gray-700 hover:text-cyan-600 font-medium text-lg"
+              className="text-gray-700 hover:text-cyan-600 font-medium text-lg transition"
             >
               Browse Jobs
             </Link>
 
-            {/* Agar user LOGGED IN nahi hai to Login/Signup dikhao */}
-            {!user && !loading && (
+            {/* User Section */}
+            {!loading && (
               <>
-                <Link 
-                  href="/login" 
-                  className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold px-8 py-3 rounded-xl transition shadow-md"
-                >
-                  Login
-                </Link>
-                <Link 
-                  href="/signup" 
-                  className="bg-gray-900 hover:bg-gray-800 text-white font-bold px-8 py-3 rounded-xl transition shadow-md"
-                >
-                  Sign Up
-                </Link>
-              </>
-            )}
+                {user ? (
+                  /* User Dropdown - Clean Version */
+                  <div ref={dropdownRef} className="relative">
+                    <button
+                      onClick={() => setDropdownOpen(!dropdownOpen)}
+                      className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-1.5 transition"
+                    >
+                      <div className="w-8 h-8 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                        {getUserInitial()}
+                      </div>
+                      <span className="text-sm text-gray-700 font-medium">
+                        {getDisplayName()}
+                      </span>
+                      <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
 
-            {/* Agar user LOGGED IN hai to Dashboard aur Logout dikhao */}
-            {user && (
-              <div className="flex items-center gap-4">
-                <Link 
-                  href="/company/dashboard" 
-                  className="text-gray-700 hover:text-cyan-600 font-medium text-lg flex items-center gap-1"
-                >
-                  <LayoutDashboard className="h-5 w-5" />
-                  Dashboard
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="text-red-600 hover:text-red-700 font-medium text-lg flex items-center gap-1"
-                >
-                  <LogOut className="h-5 w-5" />
-                  Logout
-                </button>
-                <span className="text-sm text-gray-500 flex items-center gap-1 ml-2">
-                  <User className="h-4 w-4" />
-                  {user.email?.split('@')[0]}
-                </span>
-              </div>
+                    {/* Dropdown Menu - Clean */}
+                    {dropdownOpen && (
+                      <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-50 overflow-hidden">
+                        {/* User Info Header */}
+                        <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
+                          <p className="text-sm font-semibold text-gray-800">{getDisplayName()}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">{user.email}</p>
+                        </div>
+                        
+                        {/* Menu Items */}
+                        <Link
+                          href="/company/dashboard"
+                          onClick={() => setDropdownOpen(false)}
+                          className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 transition"
+                        >
+                          <LayoutDashboard className="h-5 w-5" />
+                          <span className="font-medium">Dashboard</span>
+                        </Link>
+                        
+                        <div className="border-t border-gray-100 my-1"></div>
+                        
+                        <button
+                          onClick={handleLogout}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 transition"
+                        >
+                          <LogOut className="h-5 w-5" />
+                          <span className="font-medium">Logout</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* Login/Signup Buttons */
+                  <div className="flex items-center gap-3">
+                    <Link
+                      href="/login"
+                      className="text-gray-700 hover:text-cyan-600 font-medium transition"
+                    >
+                      Login
+                    </Link>
+                    <Link
+                      href="/signup"
+                      className="bg-cyan-600 hover:bg-cyan-700 text-white font-medium px-5 py-2 rounded-lg transition"
+                    >
+                      Sign Up
+                    </Link>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -126,46 +181,53 @@ export default function Navbar() {
                 Browse Jobs
               </Link>
 
-              {/* Mobile mein bhi condition */}
-              {!user && !loading && (
+              {!loading && (
                 <>
-                  <Link
-                    href="/login"
-                    onClick={() => setIsOpen(false)}
-                    className="bg-cyan-600 text-white text-center px-4 py-3 rounded-xl hover:bg-cyan-700"
-                  >
-                    Login
-                  </Link>
-                  <Link
-                    href="/signup"
-                    onClick={() => setIsOpen(false)}
-                    className="bg-gray-900 text-white text-center px-4 py-3 rounded-xl hover:bg-gray-800"
-                  >
-                    Sign Up
-                  </Link>
-                </>
-              )}
-
-              {user && (
-                <>
-                  <Link
-                    href="/company/dashboard"
-                    onClick={() => setIsOpen(false)}
-                    className="text-gray-600 hover:text-cyan-600 px-2 py-2 text-lg flex items-center gap-2"
-                  >
-                    <LayoutDashboard className="h-5 w-5" />
-                    Dashboard
-                  </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="text-red-600 hover:text-red-700 px-2 py-2 text-lg text-left flex items-center gap-2"
-                  >
-                    <LogOut className="h-5 w-5" />
-                    Logout
-                  </button>
-                  <span className="text-sm text-gray-500 px-2 py-1">
-                    {user.email}
-                  </span>
+                  {user ? (
+                    <>
+                      <div className="flex items-center gap-3 px-2 py-3 bg-gray-50 rounded-lg">
+                        <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+                          {getUserInitial()}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-800">{getDisplayName()}</p>
+                          <p className="text-xs text-gray-500">{user.email}</p>
+                        </div>
+                      </div>
+                      <Link
+                        href="/company/dashboard"
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center gap-3 px-2 py-3 text-gray-700 hover:bg-cyan-50 rounded-lg"
+                      >
+                        <LayoutDashboard className="h-5 w-5" />
+                        Dashboard
+                      </Link>
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-3 px-2 py-3 text-red-600 hover:bg-red-50 rounded-lg"
+                      >
+                        <LogOut className="h-5 w-5" />
+                        Logout
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        href="/login"
+                        onClick={() => setIsOpen(false)}
+                        className="bg-cyan-600 text-white text-center px-4 py-3 rounded-xl"
+                      >
+                        Login
+                      </Link>
+                      <Link
+                        href="/signup"
+                        onClick={() => setIsOpen(false)}
+                        className="bg-gray-900 text-white text-center px-4 py-3 rounded-xl"
+                      >
+                        Sign Up
+                      </Link>
+                    </>
+                  )}
                 </>
               )}
             </div>

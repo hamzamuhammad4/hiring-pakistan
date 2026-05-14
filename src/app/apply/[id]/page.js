@@ -1,161 +1,172 @@
-// src/app/apply/[id]/page.js   ← YE PURA REPLACE KAR DE (CV HATA DIYA HAI)
-
+// src/app/apply/[id]/page.js
 "use client";
 
 import { useState, useEffect } from "react";
-import { db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useParams, useRouter } from "next/navigation";
+import { db, storage } from "@/lib/firebase";
+import { doc, getDoc, addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import toast from 'react-hot-toast';
+import { Briefcase, Building2, User, Mail, Phone, MapPin, FileText, Upload, ChevronLeft, CheckCircle, AlertCircle } from "lucide-react";
 
-export default function ApplyPage({ params }) {
+export default function ApplyPage() {
+  const { id } = useParams();
   const router = useRouter();
-  const [id, setId] = useState(null);
+  const [job, setJob] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    phone: "",
-    city: "",
-    coverLetter: "",
+    fullName: "", email: "", phone: "", city: "", experience: "", skills: "", coverLetter: ""
   });
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState("");
+  const [cvFile, setCvFile] = useState(null);
+  const [cvPreview, setCvPreview] = useState(null);
 
-  // Await params.id
   useEffect(() => {
-    params.then((p) => setId(p.id)).catch(() => setError("Invalid job ID"));
-  }, [params]);
+    const fetchJob = async () => {
+      try {
+        const jobRef = doc(db, "jobs", id);
+        const jobSnap = await getDoc(jobRef);
+        if (jobSnap.exists()) {
+          setJob({ id: jobSnap.id, ...jobSnap.data() });
+        } else {
+          router.push("/jobs");
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchJob();
+  }, [id, router]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-    if (!id) {
-      setError("Invalid job ID. Please apply from the job page.");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const applicationData = {
-        jobId: id,
-        fullName: formData.fullName,
-        email: formData.email,
-        phone: formData.phone,
-        city: formData.city,
-        coverLetter: formData.coverLetter || "",
-        createdAt: serverTimestamp(),
-        status: "pending", // dashboard pending count ke liye
-      };
-
-      console.log("Saving application:", applicationData); // debug ke liye
-
-      await addDoc(collection(db, "applications"), applicationData);
-
-      console.log("Application saved successfully!");
-
-      setSuccess(true);
-      setTimeout(() => router.push("/jobs"), 3000);
-    } catch (err) {
-      console.error("Apply error:", err.code, err.message);
-      setError("Failed to submit application. Please try again.");
-    } finally {
-      setLoading(false);
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("File too large. Max 5MB");
+        return;
+      }
+      setCvFile(file);
+      setCvPreview(file.name);
     }
   };
 
-  if (!id && !error) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.fullName || !formData.email || !cvFile) {
+      toast.error("Please fill all required fields and upload CV");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const timestamp = Date.now();
+      const fileName = `cv_${formData.email}_${timestamp}_${cvFile.name}`;
+      const storageRef = ref(storage, `cvs/${fileName}`);
+      await uploadBytes(storageRef, cvFile);
+      const cvUrl = await getDownloadURL(storageRef);
+
+      await addDoc(collection(db, "applications"), {
+        jobId: id, jobTitle: job.title, companyId: job.companyId, companyName: job.companyName,
+        ...formData, cvUrl, status: "pending", appliedAt: serverTimestamp(), createdAt: serverTimestamp()
+      });
+
+      toast.success("Application submitted successfully!");
+      router.push(`/jobs/${id}?applied=true`);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to submit application");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
+      </div>
+    );
+  }
+
+  if (!job) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="max-w-3xl mx-auto">
-        <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-10">
-          <h1 className="text-3xl font-bold text-center mb-8 text-gray-800">Apply for the Job</h1>
+    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        <Link href={`/jobs/${id}`} className="inline-flex items-center gap-2 text-cyan-600 hover:text-cyan-700 mb-6">
+          <ChevronLeft className="h-4 w-4" /> Back to Job
+        </Link>
 
-          {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-xl mb-6 text-center font-medium">
-              {error}
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+          <div className="bg-gradient-to-r from-cyan-600 to-blue-700 text-white p-6">
+            <div className="flex items-center gap-4">
+              <div className="bg-white/20 backdrop-blur rounded-xl p-3">
+                <Briefcase className="h-8 w-8" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold">{job.title}</h1>
+                <p className="opacity-90 flex items-center gap-1"><Building2 className="h-4 w-4" /> {job.companyName}</p>
+              </div>
             </div>
-          )}
+          </div>
 
-          {success ? (
-            <div className="text-center py-12">
-              <h2 className="text-4xl font-bold text-green-600 mb-4">Success!</h2>
-              <p className="text-xl text-gray-700 mb-6">Your application has been submitted.</p>
-              <p className="text-gray-600 mb-8">Redirecting to jobs page in 3 seconds...</p>
-              <Link href="/jobs" className="inline-block bg-cyan-600 text-white font-bold px-10 py-4 rounded-2xl hover:bg-cyan-700 transition">
-                Go to Jobs Now
-              </Link>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label className="block text-lg font-medium text-gray-700 mb-2">Full Name *</label>
-                <input
-                  type="text"
-                  value={formData.fullName}
-                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                  className="w-full px-5 py-3 rounded-xl border border-gray-300 focus:border-cyan-500 outline-none"
-                  required
-                />
+          <div className="p-6 md:p-8">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="grid md:grid-cols-2 gap-5">
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} placeholder="Full Name *" className="w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-cyan-500" required />
+                </div>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Email Address *" className="w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-cyan-500" required />
+                </div>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="Phone Number" className="w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-cyan-500" />
+                </div>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="City" className="w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-cyan-500" />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-lg font-medium text-gray-700 mb-2">Email *</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-5 py-3 rounded-xl border border-gray-300 focus:border-cyan-500 outline-none"
-                  required
-                />
+              <div className="grid md:grid-cols-2 gap-5">
+                <select name="experience" value={formData.experience} onChange={handleChange} className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-cyan-500">
+                  <option value="">Experience</option>
+                  <option>Fresher</option><option>1-2 years</option><option>3-5 years</option><option>5-7 years</option><option>7+ years</option>
+                </select>
+                <input type="text" name="skills" value={formData.skills} onChange={handleChange} placeholder="Skills (comma separated)" className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-cyan-500" />
               </div>
 
-              <div>
-                <label className="block text-lg font-medium text-gray-700 mb-2">Phone Number *</label>
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-5 py-3 rounded-xl border border-gray-300 focus:border-cyan-500 outline-none"
-                  required
-                />
+              <textarea name="coverLetter" value={formData.coverLetter} onChange={handleChange} rows="4" placeholder="Cover Letter" className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-cyan-500" />
+
+              <div className="border-2 border-dashed rounded-xl p-6 text-center">
+                {cvPreview ? (
+                  <div>
+                    <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-2" />
+                    <p>{cvPreview}</p>
+                    <button type="button" onClick={() => { setCvFile(null); setCvPreview(null); }} className="text-red-500 text-sm mt-2">Remove</button>
+                  </div>
+                ) : (
+                  <label className="cursor-pointer block">
+                    <Upload className="h-10 w-10 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-500">Click to upload CV (PDF, DOC, DOCX, Max 5MB) *</p>
+                    <input type="file" accept=".pdf,.doc,.docx" onChange={handleFileChange} className="hidden" required />
+                  </label>
+                )}
               </div>
 
-              <div>
-                <label className="block text-lg font-medium text-gray-700 mb-2">City *</label>
-                <input
-                  type="text"
-                  value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  className="w-full px-5 py-3 rounded-xl border border-gray-300 focus:border-cyan-500 outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-lg font-medium text-gray-700 mb-2">Cover Letter (Optional)</label>
-                <textarea
-                  value={formData.coverLetter}
-                  onChange={(e) => setFormData({ ...formData, coverLetter: e.target.value })}
-                  rows={4}
-                  className="w-full px-5 py-3 rounded-xl border border-gray-300 focus:border-cyan-500 outline-none resize-none"
-                  placeholder="Why are you a good fit for this role?"
-                />
-              </div>
-
-              {/* CV upload completely hata diya hai */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-700 hover:to-blue-800 text-white font-bold text-xl py-5 rounded-2xl shadow-xl transform hover:scale-105 transition-all disabled:opacity-70"
-              >
-                {loading ? "Submitting..." : "Submit Application"}
+              <button type="submit" disabled={submitting} className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 rounded-xl transition disabled:bg-gray-400">
+                {submitting ? "Submitting..." : "Submit Application"}
               </button>
             </form>
-          )}
+          </div>
         </div>
       </div>
     </div>
