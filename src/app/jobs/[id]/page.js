@@ -63,7 +63,7 @@ export default async function SingleJobPage({ params }) {
 
                 <div className="flex-1">
                   <h1 className="text-3xl md:text-4xl font-extrabold mb-2">{job.title}</h1>
-                  <p className="text-xl opacity-90 mb-3">{job.companyName}</p>
+                  <p className="text-xl opacity-90 mb-3">Hiring Pakistan</p>
                   <div className="flex flex-wrap gap-3">
                     <span className="bg-white/30 px-4 py-1.5 rounded-full text-sm">{job.location || "Karachi"}</span>
                     <span className="bg-white/30 px-4 py-1.5 rounded-full text-sm">{job.type || "Full Time"}</span>

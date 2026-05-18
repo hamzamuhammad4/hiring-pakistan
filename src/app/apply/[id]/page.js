@@ -3,9 +3,8 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { db, storage } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { doc, getDoc, addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import Link from "next/link";
 import toast from 'react-hot-toast';
 import { Briefcase, Building2, User, Mail, Phone, MapPin, FileText, Upload, ChevronLeft, CheckCircle, AlertCircle } from "lucide-react";
@@ -64,22 +63,41 @@ export default function ApplyPage() {
 
     setSubmitting(true);
     try {
-      const timestamp = Date.now();
-      const fileName = `cv_${formData.email}_${timestamp}_${cvFile.name}`;
-      const storageRef = ref(storage, `cvs/${fileName}`);
-      await uploadBytes(storageRef, cvFile);
-      const cvUrl = await getDownloadURL(storageRef);
+      // ✅ Upload CV to VPS storage via API route
+      const uploadFormData = new FormData();
+      uploadFormData.append('cv', cvFile);
+      
+      const uploadRes = await fetch('/api/upload', {
+        method: 'POST',
+        body: uploadFormData,
+      });
+      
+      const uploadData = await uploadRes.json();
+      
+      if (!uploadData.success) {
+        throw new Error(uploadData.error);
+      }
+      
+      const cvUrl = uploadData.url;
 
+      // ✅ Save application to Firestore
       await addDoc(collection(db, "applications"), {
-        jobId: id, jobTitle: job.title, companyId: job.companyId, companyName: job.companyName,
-        ...formData, cvUrl, status: "pending", appliedAt: serverTimestamp(), createdAt: serverTimestamp()
+        jobId: id, 
+        jobTitle: job.title, 
+        companyId: job.companyId, 
+        companyName: job.companyName,
+        ...formData, 
+        cvUrl: cvUrl,  // VPS storage URL
+        status: "pending", 
+        appliedAt: serverTimestamp(), 
+        createdAt: serverTimestamp()
       });
 
       toast.success("Application submitted successfully!");
       router.push(`/jobs/${id}?applied=true`);
     } catch (error) {
       console.error(error);
-      toast.error("Failed to submit application");
+      toast.error(error.message || "Failed to submit application");
     } finally {
       setSubmitting(false);
     }
@@ -110,7 +128,7 @@ export default function ApplyPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold">{job.title}</h1>
-                <p className="opacity-90 flex items-center gap-1"><Building2 className="h-4 w-4" /> {job.companyName}</p>
+                <p className="opacity-90 flex items-center gap-1"><Building2 className="h-4 w-4" /> Hiring Pakistan</p>
               </div>
             </div>
           </div>

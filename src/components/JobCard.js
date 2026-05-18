@@ -15,7 +15,7 @@ export default function JobCard({ job }) {
       {/* Header */}
       <div className="p-5 border-b border-gray-100">
         <h3 className="text-xl font-bold text-gray-800 line-clamp-2">{job.title}</h3>
-        <p className="text-gray-600 mt-1">{job.companyName}</p>
+        <p className="text-gray-600 mt-1">Hiring Pakistan</p>
       </div>
 
       {/* Details */}

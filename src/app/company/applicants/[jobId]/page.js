@@ -1,13 +1,11 @@
 // src/app/company/applicants/[jobId]/page.js
-// FIXED VERSION WITH PROPER DATA FETCHING
-
 "use client";
 
 import { useState, useEffect } from "react";
 import { db, auth } from "@/lib/firebase";
 import { 
   collection, query, where, getDocs, doc, getDoc, 
-  updateDoc, onSnapshot, orderBy 
+  updateDoc, onSnapshot, orderBy, increment 
 } from "firebase/firestore";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
@@ -20,11 +18,9 @@ export default function ApplicantsPage() {
   const [loading, setLoading] = useState(true);
   const [jobTitle, setJobTitle] = useState("Loading...");
   const [companyCredits, setCompanyCredits] = useState(0);
-  const [selectedApp, setSelectedApp] = useState(null);
-  const [showCVModal, setShowCVModal] = useState(false);
+  const [companyPlan, setCompanyPlan] = useState("Basic");
 
   useEffect(() => {
-    // Check authentication
     const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
       if (!user) {
         router.push("/company/login");
@@ -32,11 +28,12 @@ export default function ApplicantsPage() {
       }
 
       try {
-        // Get company credits
+        // Get company credits and plan
         const companyRef = doc(db, "companies", user.uid);
         const companySnap = await getDoc(companyRef);
         if (companySnap.exists()) {
           setCompanyCredits(companySnap.data().credits || 0);
+          setCompanyPlan(companySnap.data().plan || "Basic");
         }
 
         // Fetch job title
@@ -61,7 +58,7 @@ export default function ApplicantsPage() {
         const q = query(
           collection(db, "applications"),
           where("jobId", "==", jobId),
-          orderBy("createdAt", "desc") // This requires a composite index in Firebase
+          orderBy("createdAt", "desc")
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -70,21 +67,18 @@ export default function ApplicantsPage() {
             return {
               id: doc.id,
               ...data,
-              // Convert Firestore timestamps to Date objects safely
               createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
               appliedAt: data.appliedAt?.toDate ? data.appliedAt.toDate() : new Date(),
             };
           });
 
-          console.log("✅ Applications found:", appList.length);
           setApplications(appList);
           setLoading(false);
         }, (error) => {
-          console.error("❌ Error fetching applications:", error);
+          console.error("Error fetching applications:", error);
           
           // If orderBy fails, try without orderBy
           if (error.code === 'failed-precondition') {
-            console.log("Trying without orderBy...");
             const fallbackQuery = query(
               collection(db, "applications"),
               where("jobId", "==", jobId)
@@ -100,7 +94,6 @@ export default function ApplicantsPage() {
                 };
               });
               
-              // Sort manually
               appList.sort((a, b) => b.createdAt - a.createdAt);
               setApplications(appList);
               setLoading(false);
@@ -140,43 +133,54 @@ export default function ApplicantsPage() {
 
   const handleViewCV = async (application) => {
     // Check if CV exists
-    if (!application.cvUrl && !application.cv) {
+    const cvUrl = application.cvUrl || application.cv;
+    
+    if (!cvUrl) {
       toast.error("No CV uploaded");
       return;
     }
 
     // Check credits
     if (companyCredits < 1) {
-      toast.error("Insufficient credits! Please add funds to view CV.");
-      router.push("/company/funds");
+      toast.error((t) => (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">⚠️ Insufficient Credits!</span>
+          </div>
+          <p className="text-sm">You need at least 1 credit to view this CV.</p>
+          <p className="text-xs opacity-80">Current credits: {companyCredits}</p>
+          <button
+            onClick={() => {
+              toast.dismiss(t.id);
+              router.push("/company/funds");
+            }}
+            className="mt-2 bg-cyan-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
+          >
+            Buy Credits Now →
+          </button>
+        </div>
+      ), { duration: 8000 });
       return;
     }
 
     try {
-      // Get CV URL
-      let cvUrl = application.cvUrl || application.cv;
-      
-      // If it's a Firebase Storage path, construct URL
-      if (cvUrl && !cvUrl.startsWith('http')) {
-        cvUrl = `https://firebasestorage.googleapis.com/v0/b/hiring-pakistan-0.appspot.com/o/${encodeURIComponent(cvUrl)}?alt=media`;
-      }
-
-      // Deduct credit
       const user = auth.currentUser;
       const companyRef = doc(db, "companies", user.uid);
+      
+      // Deduct 1 credit
       await updateDoc(companyRef, {
-        credits: companyCredits - 1
+        credits: increment(-1)
       });
       
       setCompanyCredits(prev => prev - 1);
+      toast.success(`1 credit deducted. Remaining credits: ${companyCredits - 1}`);
       
-      // Open CV in new tab
+      // ✅ Open CV from VPS storage (direct URL)
       window.open(cvUrl, '_blank');
-      toast.success("1 credit deducted");
       
     } catch (err) {
       console.error("Error viewing CV:", err);
-      toast.error("Failed to view CV");
+      toast.error("Failed to view CV. Please try again.");
     }
   };
 
@@ -204,6 +208,7 @@ export default function ApplicantsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-10 px-4">
       <div className="max-w-6xl mx-auto">
+        
         {/* Header with Credits */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -221,6 +226,9 @@ export default function ApplicantsPage() {
                 <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">
                   Credits: {companyCredits}
                 </span>
+                <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm">
+                  Plan: {companyPlan}
+                </span>
               </p>
             </div>
             
@@ -233,6 +241,19 @@ export default function ApplicantsPage() {
               </Link>
             )}
           </div>
+          
+          {/* Low Credits Warning */}
+          {companyCredits > 0 && companyCredits < 5 && (
+            <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-xl p-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span>⚠️</span>
+                <span className="text-sm text-yellow-800">Low credits! You have only {companyCredits} credits left.</span>
+              </div>
+              <Link href="/company/funds" className="text-yellow-700 text-sm font-medium hover:underline">
+                Add Credits →
+              </Link>
+            </div>
+          )}
         </div>
 
         {applications.length === 0 ? (
@@ -347,7 +368,7 @@ export default function ApplicantsPage() {
                           <option value="rejected">❌ Rejected</option>
                         </select>
 
-                        {/* CV Button */}
+                        {/* CV Button - VPS Storage Se Direct Open */}
                         {(app.cvUrl || app.cv) && (
                           <button
                             onClick={() => handleViewCV(app)}
