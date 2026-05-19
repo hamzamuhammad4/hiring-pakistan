@@ -47,12 +47,12 @@ export default function PostJobPage() {
         return;
       }
 
-      // ✅ STATUS "PENDING" - Admin approval needed
+      // ✅ STATUS "PENDING" - Admin approval required
       await addDoc(collection(db, "jobs"), {
         ...formData,
         companyId: user.uid,
         companyEmail: user.email,
-        status: "pending",  // ← IMPORTANT: pending rakhna hai
+        status: "pending",  // ← YAHI IMPORTANT HAI - "active" mat karna
         views: 0,
         applicantsCount: 0,
         createdAt: serverTimestamp(),
@@ -86,7 +86,7 @@ export default function PostJobPage() {
               <Briefcase className="h-8 w-8" />
               <h1 className="text-2xl font-bold">Post a New Job</h1>
             </div>
-            <p className="text-cyan-100 mt-2">Fill in the details below to post a job. Admin will review and approve it.</p>
+            <p className="text-cyan-100 mt-2">Fill in the details below. Admin will review and approve it.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
@@ -154,7 +154,7 @@ export default function PostJobPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Contact Number (for CVs)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Contact Number</label>
                 <input
                   type="text"
                   name="contact"
@@ -186,7 +186,6 @@ export default function PostJobPage() {
                 onChange={handleChange}
                 rows="4"
                 className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-cyan-500"
-                placeholder="List the requirements for this position..."
               />
             </div>
 
@@ -198,7 +197,6 @@ export default function PostJobPage() {
                 onChange={handleChange}
                 rows="3"
                 className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-cyan-500"
-                placeholder="Health insurance, paid time off, etc."
               />
             </div>
 
