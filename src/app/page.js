@@ -3,14 +3,19 @@
 
 import JobCard from "@/components/JobCard";
 import { db } from "@/lib/firebase";
-import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
+import { collection, query, orderBy, limit, getDocs, where } from "firebase/firestore";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
-// Client-side data fetch function
+// Client-side data fetch function - ✅ Sirf ACTIVE jobs fetch karega
 async function getFeaturedJobs() {
   try {
-    const q = query(collection(db, "jobs"), orderBy("createdAt", "desc"), limit(6));
+    const q = query(
+      collection(db, "jobs"), 
+      where("status", "==", "active"),  // ← ONLY ACTIVE JOBS
+      orderBy("createdAt", "desc"), 
+      limit(6)
+    );
     const snapshot = await getDocs(q);
     const jobs = [];
     snapshot.forEach((doc) => {
