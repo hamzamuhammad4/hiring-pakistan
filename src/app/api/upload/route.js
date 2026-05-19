@@ -2,6 +2,7 @@
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { NextResponse } from 'next/server';
 
 export async function POST(request) {
   try {
@@ -9,19 +10,19 @@ export async function POST(request) {
     const file = formData.get('cv');
     
     if (!file) {
-      return Response.json({ error: 'No file uploaded' }, { status: 400 });
+      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
 
-    // Check file type (only PDF, DOC, DOCX)
+    // Check file type
     const fileType = file.type;
     const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     if (!allowedTypes.includes(fileType)) {
-      return Response.json({ error: 'Only PDF, DOC, DOCX files are allowed' }, { status: 400 });
+      return NextResponse.json({ error: 'Only PDF, DOC, DOCX files are allowed' }, { status: 400 });
     }
 
     // Check file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      return Response.json({ error: 'File too large. Max 5MB' }, { status: 400 });
+      return NextResponse.json({ error: 'File too large. Max 5MB' }, { status: 400 });
     }
 
     const bytes = await file.arrayBuffer();
@@ -44,10 +45,10 @@ export async function POST(request) {
     
     const fileUrl = `/uploads/cvs/${fileName}`;
     
-    return Response.json({ success: true, url: fileUrl });
+    return NextResponse.json({ success: true, url: fileUrl });
     
   } catch (error) {
     console.error('Upload error:', error);
-    return Response.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
