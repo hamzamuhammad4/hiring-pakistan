@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 import { 
   Briefcase, Search, CheckCircle, XCircle, 
   Eye, Trash2, Clock, Building2, MapPin, DollarSign,
-  Filter, ExternalLink, AlertTriangle
+  Filter, ExternalLink, AlertTriangle, RefreshCw
 } from "lucide-react";
 import Link from "next/link";
 
@@ -62,25 +62,39 @@ export default function AdminJobs() {
     }
   };
 
+  // ✅ FIXED: Approve function with proper status update
   const handleApprove = async (jobId) => {
     try {
+      // Update Firestore
       await updateDoc(doc(db, "jobs", jobId), {
         status: 'active',
         approvedAt: new Date(),
         approvedBy: 'admin'
       });
       
-      setJobs(jobs.map(job => 
-        job.id === jobId ? { ...job, status: 'active' } : job
-      ));
+      // Update local state immediately
+      setJobs(prevJobs => 
+        prevJobs.map(job => 
+          job.id === jobId ? { ...job, status: 'active' } : job
+        )
+      );
       
-      toast.success("Job approved successfully!");
+      // Update stats
+      setStats(prev => ({
+        ...prev,
+        pending: prev.pending - 1,
+        approved: prev.approved + 1
+      }));
+      
+      toast.success("✅ Job approved successfully! It will now appear on the website.");
+      
     } catch (err) {
       console.error("Error approving job:", err);
       toast.error("Failed to approve job");
     }
   };
 
+  // ✅ FIXED: Reject function
   const handleReject = async (jobId) => {
     const reason = prompt("Please enter reason for rejection:");
     if (!reason) return;
@@ -89,14 +103,23 @@ export default function AdminJobs() {
       await updateDoc(doc(db, "jobs", jobId), {
         status: 'rejected',
         rejectionReason: reason,
-        rejectedAt: new Date()
+        rejectedAt: new Date(),
+        rejectedBy: 'admin'
       });
       
-      setJobs(jobs.map(job => 
-        job.id === jobId ? { ...job, status: 'rejected', rejectionReason: reason } : job
-      ));
+      setJobs(prevJobs => 
+        prevJobs.map(job => 
+          job.id === jobId ? { ...job, status: 'rejected', rejectionReason: reason } : job
+        )
+      );
       
-      toast.success("Job rejected");
+      setStats(prev => ({
+        ...prev,
+        pending: prev.pending - 1,
+        rejected: prev.rejected + 1
+      }));
+      
+      toast.success("❌ Job rejected");
     } catch (err) {
       console.error("Error rejecting job:", err);
       toast.error("Failed to reject job");
@@ -108,7 +131,20 @@ export default function AdminJobs() {
     
     try {
       await deleteDoc(doc(db, "jobs", jobId));
-      setJobs(jobs.filter(job => job.id !== jobId));
+      setJobs(prevJobs => prevJobs.filter(job => job.id !== jobId));
+      
+      // Update stats
+      const deletedJob = jobs.find(j => j.id === jobId);
+      if (deletedJob) {
+        if (deletedJob.status === 'pending') {
+          setStats(prev => ({ ...prev, pending: prev.pending - 1, total: prev.total - 1 }));
+        } else if (deletedJob.status === 'active') {
+          setStats(prev => ({ ...prev, approved: prev.approved - 1, total: prev.total - 1 }));
+        } else if (deletedJob.status === 'rejected') {
+          setStats(prev => ({ ...prev, rejected: prev.rejected - 1, total: prev.total - 1 }));
+        }
+      }
+      
       toast.success("Job deleted successfully");
     } catch (err) {
       console.error("Error deleting job:", err);
@@ -162,12 +198,12 @@ export default function AdminJobs() {
         <p className="text-gray-500 mb-4">{error}</p>
         <button 
           onClick={fetchJobs}
-          className="bg-cyan-600 text-white px-6 py-2 rounded-lg hover:bg-cyan-700"
+          className="bg-cyan-600 text-white px-6 py-2 rounded-lg hover:bg-cyan-700 flex items-center gap-2 mx-auto"
         >
-          Retry
+          <RefreshCw className="h-4 w-4" /> Retry
         </button>
         <p className="text-xs text-gray-400 mt-4">
-          Tip: Jobs will appear here once companies post them.
+          Tip: Jobs will appear here when companies post them.
         </p>
       </div>
     );
@@ -228,6 +264,13 @@ export default function AdminJobs() {
               </button>
             ))}
           </div>
+          <button
+            onClick={fetchJobs}
+            className="px-4 py-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center gap-2"
+            title="Refresh"
+          >
+            <RefreshCw className="h-4 w-4" /> Refresh
+          </button>
         </div>
       </div>
 
