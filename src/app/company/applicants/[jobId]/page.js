@@ -4,21 +4,23 @@
 import { useState, useEffect } from "react";
 import { db, auth } from "@/lib/firebase";
 import { 
-  collection, query, where, getDocs, doc, getDoc, 
-  updateDoc, onSnapshot, orderBy, increment 
+  collection, query, where, doc, getDoc, 
+  updateDoc, onSnapshot, increment 
 } from "firebase/firestore";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import toast from 'react-hot-toast';
+import { Eye, Mail, Phone, MapPin, CheckCircle, XCircle, Clock, AlertCircle, CreditCard } from "lucide-react";
 
 export default function ApplicantsPage() {
   const router = useRouter();
   const { jobId } = useParams();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [jobTitle, setJobTitle] = useState("Loading...");
+  const [jobTitle, setJobTitle] = useState("");
   const [companyCredits, setCompanyCredits] = useState(0);
   const [companyPlan, setCompanyPlan] = useState("Basic");
+  const [viewingCV, setViewingCV] = useState(null);
 
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
@@ -36,56 +38,24 @@ export default function ApplicantsPage() {
           setCompanyPlan(companySnap.data().plan || "Basic");
         }
 
-        // Fetch job title
+        // Get job title
         const jobRef = doc(db, "jobs", jobId);
         const jobSnap = await getDoc(jobRef);
         if (jobSnap.exists()) {
           setJobTitle(jobSnap.data().title);
-          
-          // Check if this job belongs to current user
-          if (jobSnap.data().companyId !== user.uid) {
-            toast.error("You don't have permission");
-            router.push("/company/dashboard");
-            return;
-          }
-        } else {
-          router.push("/company/dashboard");
-          return;
         }
 
-        // Real-time listener for applications
-        const q = query(
-          collection(db, "applications"),
-          where("jobId", "==", jobId),
-          orderBy("createdAt", "desc")
-        );
-
+        // Real-time applications listener
+        const q = query(collection(db, "applications"), where("jobId", "==", jobId));
+        
         const unsubscribe = onSnapshot(q, (snapshot) => {
-          const appList = snapshot.docs.map((doc) => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              ...data,
-              createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
-            };
-          });
+          const appList = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate?.() || new Date(),
+          }));
+          appList.sort((a, b) => b.createdAt - a.createdAt);
           setApplications(appList);
-          setLoading(false);
-        }, (error) => {
-          if (error.code === 'failed-precondition') {
-            const fallbackQuery = query(collection(db, "applications"), where("jobId", "==", jobId));
-            const fallbackUnsubscribe = onSnapshot(fallbackQuery, (snapshot) => {
-              const appList = snapshot.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data(),
-                createdAt: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : new Date(),
-              }));
-              appList.sort((a, b) => b.createdAt - a.createdAt);
-              setApplications(appList);
-              setLoading(false);
-            });
-            return fallbackUnsubscribe;
-          }
           setLoading(false);
         });
 
@@ -111,7 +81,7 @@ export default function ApplicantsPage() {
     }
   };
 
-  // ✅ CV VIEW WITH CREDIT DEDUCTION
+  // ✅ FIXED: CV View with proper credit deduction
   const handleViewCV = async (application) => {
     const cvUrl = application.cvUrl || application.cv;
     
@@ -120,12 +90,13 @@ export default function ApplicantsPage() {
       return;
     }
 
-    // ✅ CHECK CREDITS
+    // Check credits
     if (companyCredits < 1) {
       toast.error((t) => (
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
-            <span className="font-semibold">⚠️ Insufficient Credits!</span>
+            <AlertCircle className="h-5 w-5 text-red-500" />
+            <span className="font-semibold">Insufficient Credits!</span>
           </div>
           <p className="text-sm">You need at least 1 credit to view this CV.</p>
           <p className="text-xs opacity-80">Current credits: {companyCredits}</p>
@@ -134,7 +105,7 @@ export default function ApplicantsPage() {
               toast.dismiss(t.id);
               router.push("/company/funds");
             }}
-            className="mt-2 bg-cyan-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
+            className="mt-2 bg-cyan-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-cyan-700"
           >
             Buy Credits Now →
           </button>
@@ -143,24 +114,31 @@ export default function ApplicantsPage() {
       return;
     }
 
+    setViewingCV(application.id);
+    
     try {
       const user = auth.currentUser;
       const companyRef = doc(db, "companies", user.uid);
       
-      // ✅ DEDUCT 1 CREDIT
+      // ✅ Deduct 1 credit using increment
       await updateDoc(companyRef, {
         credits: increment(-1)
       });
       
+      // Update local state
       setCompanyCredits(prev => prev - 1);
+      
+      // Show success message
       toast.success(`1 credit deducted. Remaining credits: ${companyCredits - 1}`);
       
-      // Open CV in new tab
+      // ✅ Open CV in new tab - NO PAGE REFRESH
       window.open(cvUrl, '_blank');
       
     } catch (err) {
       console.error("Error viewing CV:", err);
-      toast.error("Failed to view CV");
+      toast.error("Failed to view CV. Please try again.");
+    } finally {
+      setViewingCV(null);
     }
   };
 
@@ -224,17 +202,27 @@ export default function ApplicantsPage() {
               <div key={app.id} className="bg-white rounded-2xl shadow-lg p-6">
                 <div className="flex flex-col md:flex-row justify-between gap-4">
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-800">{app.fullName || app.name}</h3>
-                    <p className="text-gray-600 mt-1">{app.email}</p>
-                    <p className="text-gray-500 text-sm mt-1">{app.phone && `📞 ${app.phone}`}</p>
-                    {app.coverLetter && (
-                      <p className="mt-3 text-gray-600 text-sm bg-gray-50 p-3 rounded-lg">
-                        <strong>Cover Letter:</strong> {app.coverLetter}
-                      </p>
-                    )}
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+                        {app.fullName?.charAt(0) || app.name?.charAt(0) || 'A'}
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-800">{app.fullName || app.name}</h3>
+                        <div className="flex flex-wrap gap-3 mt-1 text-sm text-gray-500">
+                          <span className="flex items-center gap-1"><Mail className="h-4 w-4" /> {app.email}</span>
+                          <span className="flex items-center gap-1"><Phone className="h-4 w-4" /> {app.phone || 'N/A'}</span>
+                          <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {app.city || 'N/A'}</span>
+                        </div>
+                        {app.coverLetter && (
+                          <p className="mt-2 text-gray-600 text-sm bg-gray-50 p-2 rounded">
+                            <strong>Cover Letter:</strong> {app.coverLetter}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex flex-col gap-3 min-w-[180px]">
+                  <div className="flex flex-col gap-2 min-w-[160px]">
                     <select
                       value={app.status || "pending"}
                       onChange={(e) => updateStatus(app.id, e.target.value)}
@@ -249,15 +237,19 @@ export default function ApplicantsPage() {
                     {/* ✅ CV Button with Credit Check */}
                     <button
                       onClick={() => handleViewCV(app)}
-                      disabled={companyCredits < 1}
+                      disabled={companyCredits < 1 || viewingCV === app.id}
                       className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
                         companyCredits < 1 
                           ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                           : 'bg-purple-600 hover:bg-purple-700 text-white'
                       }`}
                     >
-                      <span>📄</span>
-                      View CV {companyCredits >= 1 ? '(1 credit)' : '(No credits)'}
+                      {viewingCV === app.id ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                      {viewingCV === app.id ? 'Opening...' : (companyCredits >= 1 ? `View CV (1 credit)` : 'No Credits')}
                     </button>
 
                     <span className={`inline-block px-2 py-1 rounded-full text-xs text-center ${getStatusBadge(app.status)}`}>

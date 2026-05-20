@@ -7,7 +7,7 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, addDoc, collection, serverTimestamp } from "firebase/firestore";
 import Link from "next/link";
 import toast from 'react-hot-toast';
-import { Briefcase, Building2, User, Mail, Phone, MapPin, FileText, Upload, ChevronLeft, CheckCircle, AlertCircle } from "lucide-react";
+import { Briefcase, Building2, User, Mail, Phone, MapPin, Upload, ChevronLeft, CheckCircle } from "lucide-react";
 
 export default function ApplyPage() {
   const { id } = useParams();
@@ -16,7 +16,13 @@ export default function ApplyPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    fullName: "", email: "", phone: "", city: "", experience: "", skills: "", coverLetter: ""
+    fullName: "", 
+    email: "", 
+    phone: "", 
+    city: "", 
+    experience: "", 
+    skills: "", 
+    coverLetter: ""
   });
   const [cvFile, setCvFile] = useState(null);
   const [cvPreview, setCvPreview] = useState(null);
@@ -63,7 +69,7 @@ export default function ApplyPage() {
 
     setSubmitting(true);
     try {
-      // ✅ Upload CV to VPS storage via API route
+      // Upload CV to VPS storage
       const uploadFormData = new FormData();
       uploadFormData.append('cv', cvFile);
       
@@ -80,14 +86,14 @@ export default function ApplyPage() {
       
       const cvUrl = uploadData.url;
 
-      // ✅ Save application to Firestore
+      // ✅ Save application to Firestore - NO USER AUTH NEEDED
       await addDoc(collection(db, "applications"), {
         jobId: id, 
         jobTitle: job.title, 
         companyId: job.companyId, 
         companyName: job.companyName,
         ...formData, 
-        cvUrl: cvUrl,  // VPS storage URL
+        cvUrl: cvUrl,
         status: "pending", 
         appliedAt: serverTimestamp(), 
         createdAt: serverTimestamp()
@@ -95,6 +101,7 @@ export default function ApplyPage() {
 
       toast.success("Application submitted successfully!");
       router.push(`/jobs/${id}?applied=true`);
+      
     } catch (error) {
       console.error(error);
       toast.error(error.message || "Failed to submit application");
@@ -185,6 +192,11 @@ export default function ApplyPage() {
               </button>
             </form>
           </div>
+        </div>
+        
+        {/* No Login Required Note */}
+        <div className="mt-4 text-center text-sm text-gray-500">
+          <p>✅ No account required. Your application will be sent directly to the employer.</p>
         </div>
       </div>
     </div>
