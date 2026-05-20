@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
@@ -10,6 +11,7 @@ import {
   Briefcase, LogOut, LayoutDashboard, 
   ChevronDown, Menu, X, User, Mail, AlertCircle
 } from "lucide-react";
+import toast from 'react-hot-toast';
 
 export default function Navbar() {
   const [user, setUser] = useState(null);
@@ -62,7 +64,7 @@ export default function Navbar() {
     return user.email.split('@')[0];
   };
 
-  // ✅ Check if email is verified
+  // Check if email is verified
   const isEmailVerified = user?.emailVerified === true;
 
   return (
@@ -70,14 +72,16 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           
-          {/* Logo + Brand Name */}
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="bg-cyan-600 p-2 rounded-xl">
-              <Briefcase className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <span className="text-2xl font-bold text-gray-800">Hiring Pakistan</span>
-            </div>
+          {/* Logo - Only Image, No Text */}
+          <Link href="/" className="flex items-center">
+            <Image 
+              src="/logo.png" 
+              alt="Hiring Pakistan" 
+              width={160} 
+              height={160} 
+              priority
+              className="rounded-lg object-contain"
+            />
           </Link>
 
           {/* Desktop Menu */}
@@ -123,7 +127,7 @@ export default function Navbar() {
                           <p className="text-sm font-semibold text-gray-800">{getDisplayName()}</p>
                           <p className="text-xs text-gray-500 mt-0.5">{user.email}</p>
                           
-                          {/* ✅ Email Verification Warning */}
+                          {/* Email Verification Warning */}
                           {!isEmailVerified && (
                             <div className="mt-2 bg-yellow-50 border border-yellow-200 rounded-lg p-2">
                               <p className="text-xs text-yellow-800 flex items-center gap-1">
@@ -146,7 +150,7 @@ export default function Navbar() {
                           )}
                         </div>
                         
-                        {/* ✅ Only show Dashboard if email is verified */}
+                        {/* Only show Dashboard if email is verified */}
                         {isEmailVerified && (
                           <>
                             <Link
@@ -242,7 +246,7 @@ export default function Navbar() {
                         </div>
                       </div>
                       
-                      {/* ✅ Only show Dashboard if email is verified */}
+                      {/* Only show Dashboard if email is verified */}
                       {isEmailVerified && (
                         <Link
                           href="/company/dashboard"
