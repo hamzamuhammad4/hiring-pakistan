@@ -1,6 +1,4 @@
 // src/app/company/dashboard/page.js
-// UPDATED WITH LUCIDE REACT ICONS
-
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -40,7 +38,9 @@ import {
   Zap,
   CheckCircle,
   XCircle,
-  Loader2
+  Loader2,
+  Mail,
+  RefreshCw
 } from "lucide-react";
 
 export default function CompanyDashboard() {
@@ -50,6 +50,8 @@ export default function CompanyDashboard() {
   const [error, setError] = useState("");
   const [companyData, setCompanyData] = useState({ credits: 0, plan: 'Basic' });
   const [recentApps, setRecentApps] = useState([]);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [sendingVerification, setSendingVerification] = useState(false);
   
   const [stats, setStats] = useState({
     activeJobs: 0,
@@ -68,6 +70,44 @@ export default function CompanyDashboard() {
         router.push("/company/login");
         return;
       }
+
+      // ✅ Check email verification
+      if (!user.emailVerified) {
+        setEmailVerified(false);
+        setLoading(false);
+        toast.error((t) => (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-yellow-600" />
+              <span className="font-semibold">Email Not Verified!</span>
+            </div>
+            <p className="text-sm">Please verify your email address to access the dashboard.</p>
+            <p className="text-xs opacity-80">Check your inbox for verification link.</p>
+            <button
+              onClick={async () => {
+                setSendingVerification(true);
+                try {
+                  await user.sendEmailVerification();
+                  toast.success('Verification email sent! Check your inbox.');
+                } catch (err) {
+                  toast.error('Failed to send verification email.');
+                } finally {
+                  setSendingVerification(false);
+                  toast.dismiss(t.id);
+                }
+              }}
+              disabled={sendingVerification}
+              className="mt-2 bg-cyan-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-cyan-700 flex items-center justify-center gap-2"
+            >
+              {sendingVerification ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+              {sendingVerification ? 'Sending...' : 'Resend Verification Email'}
+            </button>
+          </div>
+        ), { duration: 10000 });
+        return;
+      }
+      
+      setEmailVerified(true);
 
       try {
         const companyRef = doc(db, "companies", user.uid);
@@ -205,6 +245,50 @@ export default function CompanyDashboard() {
     router.push("/company/funds");
   };
 
+  // ✅ Show email verification required screen
+  if (!emailVerified && !loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
+          <div className="bg-yellow-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Mail className="h-10 w-10 text-yellow-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">Verify Your Email</h1>
+          <p className="text-gray-600 mb-4">
+            Please verify your email address to access the company dashboard.
+          </p>
+          <p className="text-sm text-gray-500 mb-6">
+            We've sent a verification link to <strong>{auth.currentUser?.email}</strong>
+          </p>
+          <button
+            onClick={async () => {
+              setSendingVerification(true);
+              try {
+                await auth.currentUser?.sendEmailVerification();
+                toast.success('Verification email sent! Check your inbox.');
+              } catch (err) {
+                toast.error('Failed to send verification email.');
+              } finally {
+                setSendingVerification(false);
+              }
+            }}
+            disabled={sendingVerification}
+            className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-medium py-3 rounded-xl transition flex items-center justify-center gap-2"
+          >
+            {sendingVerification ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Mail className="h-5 w-5" />}
+            {sendingVerification ? 'Sending...' : 'Resend Verification Email'}
+          </button>
+          <button
+            onClick={handleLogout}
+            className="w-full mt-3 text-gray-500 hover:text-gray-700 text-sm"
+          >
+            ← Back to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
@@ -246,6 +330,11 @@ export default function CompanyDashboard() {
               <h1 className="text-4xl font-bold text-gray-800">Company Dashboard</h1>
             </div>
             <p className="text-gray-500">Welcome back, {auth.currentUser?.email}</p>
+            {auth.currentUser?.emailVerified && (
+              <span className="inline-flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full mt-1">
+                <CheckCircle className="h-3 w-3" /> Verified
+              </span>
+            )}
           </div>
           
           <div className="flex items-center gap-4 mt-4 md:mt-0">

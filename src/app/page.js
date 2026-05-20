@@ -254,7 +254,7 @@ export default function HomePage() {
               href="/signup" 
               className="bg-white text-cyan-600 hover:bg-gray-100 font-bold px-8 py-3 rounded-full transition"
             >
-              Sign Up as Job Seeker
+              Sign Up
             </Link>
             <Link 
               href="/company/signup" 
