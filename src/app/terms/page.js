@@ -251,8 +251,7 @@ export default function TermsPage() {
               <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                 <p className="text-gray-700"><strong>Email:</strong> <a href="mailto:info.hiringpakistan@gmail.com" className="text-cyan-600 hover:underline">info.hiringpakistan@gmail.com</a></p>
                 <p className="text-gray-700"><strong>Phone:</strong> +92 348 2350367</p>
-                <p className="text-gray-700"><strong>Address:</strong> 123 Main Street, Karachi, Pakistan</p>
-                <p className="text-gray-700"><strong>Working Hours:</strong> Monday - Friday, 9:00 AM - 6:00 PM (PKT)</p>
+              
               </div>
             </section>
 

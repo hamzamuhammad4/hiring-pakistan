@@ -41,22 +41,22 @@ export default function ContactPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-white rounded-2xl shadow-lg p-6">
-              <div className="flex items-center gap-4 mb-4">
+              {/* <div className="flex items-center gap-4 mb-4">
                 <div className="bg-cyan-100 p-3 rounded-xl"><MapPin className="h-6 w-6 text-cyan-600" /></div>
                 <div><h3 className="font-semibold text-gray-800">Address</h3><p className="text-gray-500 text-sm">123 Main Street, Karachi, Pakistan</p></div>
-              </div>
+              </div> */}
               <div className="flex items-center gap-4 mb-4">
                 <div className="bg-cyan-100 p-3 rounded-xl"><Phone className="h-6 w-6 text-cyan-600" /></div>
                 <div><h3 className="font-semibold text-gray-800">Phone</h3><p className="text-gray-500 text-sm">+92 348 2350367</p></div>
               </div>
               <div className="flex items-center gap-4 mb-4">
                 <div className="bg-cyan-100 p-3 rounded-xl"><Mail className="h-6 w-6 text-cyan-600" /></div>
-                <div><h3 className="font-semibold text-gray-800">Email</h3><p className="text-gray-500 text-sm">info@hiringpakistan.com</p></div>
+                <div><h3 className="font-semibold text-gray-800">Email</h3><p className="text-gray-500 text-sm">info.hiringpakistan@gmail.com</p></div>
               </div>
-              <div className="flex items-center gap-4">
+              {/* <div className="flex items-center gap-4">
                 <div className="bg-cyan-100 p-3 rounded-xl"><Clock className="h-6 w-6 text-cyan-600" /></div>
                 <div><h3 className="font-semibold text-gray-800">Working Hours</h3><p className="text-gray-500 text-sm">Mon - Fri: 9:00 AM - 6:00 PM</p></div>
-              </div>
+              </div> */}
             </div>
           </div>
 

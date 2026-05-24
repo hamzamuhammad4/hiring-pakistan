@@ -220,7 +220,7 @@ export default function HomePage() {
                 <span className="text-2xl font-bold text-cyan-600">1</span>
               </div>
               <h3 className="text-xl font-semibold mb-2">Create Account</h3>
-              <p className="text-gray-500">Sign up as a job seeker or employer - it's free!</p>
+              <p className="text-gray-500">Register your company - Post jobs & hire talent</p>
             </div>
             <div className="text-center p-6">
               <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -241,30 +241,30 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 px-4 bg-gradient-to-r from-cyan-600 to-blue-600">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Ready to Start Your Career Journey?
-          </h2>
-          <p className="text-cyan-100 mb-8 text-lg">
-            Join thousands of job seekers who found their dream jobs through Hiring Pakistan
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link 
-              href="/signup" 
-              className="bg-white text-cyan-600 hover:bg-gray-100 font-bold px-8 py-3 rounded-full transition"
-            >
-              Sign Up
-            </Link>
-            <Link 
-              href="/company/signup" 
-              className="bg-transparent border-2 border-white text-white hover:bg-white/10 font-bold px-8 py-3 rounded-full transition"
-            >
-              Post a Job
-            </Link>
-          </div>
-        </div>
-      </section>
+<section className="py-16 px-4 bg-gradient-to-r from-cyan-600 to-blue-600">
+  <div className="max-w-4xl mx-auto text-center">
+    <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+      Ready to Hire Top Talent?
+    </h2>
+    <p className="text-cyan-100 mb-8 text-lg">
+      Join leading companies who found their ideal candidates through Hiring Pakistan
+    </p>
+    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+      <Link 
+        href="/company/signup"   // ✅ Post a Job button
+        className="bg-white text-cyan-600 hover:bg-gray-100 font-bold px-8 py-3 rounded-full transition"
+      >
+        Post a Job
+      </Link>
+      <Link 
+        href="/company/login"    // ✅ Company Login button
+        className="bg-transparent border-2 border-white text-white hover:bg-white/10 font-bold px-8 py-3 rounded-full transition"
+      >
+        Company Login
+      </Link>
+    </div>
+  </div>
+</section>
     </>
   );
 }
