@@ -12,11 +12,11 @@ import {
   CreditCard, TrendingUp, DollarSign, 
   Calendar, AlertTriangle, CheckCircle,
   XCircle, Eye, Clock, Building2, Upload,
-  RefreshCw, Filter, Download
+  RefreshCw, Filter
 } from "lucide-react";
+import Link from "next/link";
 
-// Admin check
-const adminEmails = ["firebasehiringpakistan@gmail.com"];
+const adminEmails = ["firebasehiringpakistan@gmail.com", "hamzaayyub125@gmail.com"];
 
 export default function AdminPayments() {
   const [paymentRequests, setPaymentRequests] = useState([]);
@@ -83,6 +83,7 @@ export default function AdminPayments() {
     }
   };
 
+  // ✅ FIXED: Approve function
   const handleApprove = async (requestId, amount, companyId, creditsToAdd, planName) => {
     if (!confirm(`✅ Approve payment of Rs ${amount.toLocaleString()}?\n\n${creditsToAdd} credits will be added to company account.`)) return;
     
@@ -108,14 +109,15 @@ export default function AdminPayments() {
       await updateDoc(companyRef, updateData);
       
       toast.success(`✅ Payment approved! ${creditsToAdd} credits added.`);
-      fetchPaymentRequests();
+      fetchPaymentRequests(); // Refresh the list
       
     } catch (err) {
       console.error("Error approving payment:", err);
-      toast.error("Failed to approve payment");
+      toast.error("Failed to approve payment: " + err.message);
     }
   };
 
+  // ✅ FIXED: Reject function
   const handleReject = async (requestId) => {
     const reason = prompt("Please enter reason for rejection:");
     if (!reason) return;
@@ -129,7 +131,7 @@ export default function AdminPayments() {
       });
       
       toast.success("❌ Payment request rejected");
-      fetchPaymentRequests();
+      fetchPaymentRequests(); // Refresh the list
       
     } catch (err) {
       console.error("Error rejecting payment:", err);
@@ -189,91 +191,41 @@ export default function AdminPayments() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-6 text-white">
+        <div className="bg-green-50 rounded-2xl p-6">
           <div className="flex items-center gap-4">
-            <div className="bg-white/20 p-3 rounded-xl">
-              <DollarSign className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-sm opacity-90">Total Revenue</p>
-              <p className="text-2xl font-bold">Rs {stats.totalRevenue.toLocaleString()}</p>
-            </div>
+            <div className="bg-green-500 p-3 rounded-xl"><DollarSign className="h-6 w-6 text-white" /></div>
+            <div><p className="text-2xl font-bold text-green-700">Rs {stats.totalRevenue.toLocaleString()}</p><p className="text-green-600">Total Revenue</p></div>
           </div>
         </div>
-        <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-2xl p-6 text-white">
+        <div className="bg-yellow-50 rounded-2xl p-6">
           <div className="flex items-center gap-4">
-            <div className="bg-white/20 p-3 rounded-xl">
-              <Clock className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-sm opacity-90">Pending Amount</p>
-              <p className="text-2xl font-bold">Rs {stats.pendingAmount.toLocaleString()}</p>
-            </div>
+            <div className="bg-yellow-500 p-3 rounded-xl"><Clock className="h-6 w-6 text-white" /></div>
+            <div><p className="text-2xl font-bold text-yellow-700">Rs {stats.pendingAmount.toLocaleString()}</p><p className="text-yellow-600">Pending Amount</p></div>
           </div>
         </div>
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white">
+        <div className="bg-blue-50 rounded-2xl p-6">
           <div className="flex items-center gap-4">
-            <div className="bg-white/20 p-3 rounded-xl">
-              <CheckCircle className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-sm opacity-90">Completed</p>
-              <p className="text-2xl font-bold">{stats.completedCount}</p>
-            </div>
+            <div className="bg-blue-500 p-3 rounded-xl"><CheckCircle className="h-6 w-6 text-white" /></div>
+            <div><p className="text-2xl font-bold text-blue-700">{stats.completedCount}</p><p className="text-blue-600">Completed</p></div>
           </div>
         </div>
-        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-6 text-white">
+        <div className="bg-orange-50 rounded-2xl p-6">
           <div className="flex items-center gap-4">
-            <div className="bg-white/20 p-3 rounded-xl">
-              <Clock className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-sm opacity-90">Pending</p>
-              <p className="text-2xl font-bold">{stats.pendingCount}</p>
-            </div>
+            <div className="bg-orange-500 p-3 rounded-xl"><Clock className="h-6 w-6 text-white" /></div>
+            <div><p className="text-2xl font-bold text-orange-700">{stats.pendingCount}</p><p className="text-orange-600">Pending</p></div>
           </div>
         </div>
       </div>
 
       {/* Filters */}
       <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-lg capitalize transition flex items-center gap-2 ${
-              filter === 'all' ? 'bg-cyan-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            <Filter className="h-4 w-4" /> All
-          </button>
-          <button
-            onClick={() => setFilter('pending')}
-            className={`px-4 py-2 rounded-lg capitalize transition flex items-center gap-2 ${
-              filter === 'pending' ? 'bg-yellow-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            <Clock className="h-4 w-4" /> Pending
-          </button>
-          <button
-            onClick={() => setFilter('approved')}
-            className={`px-4 py-2 rounded-lg capitalize transition flex items-center gap-2 ${
-              filter === 'approved' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            <CheckCircle className="h-4 w-4" /> Approved
-          </button>
-          <button
-            onClick={() => setFilter('rejected')}
-            className={`px-4 py-2 rounded-lg capitalize transition flex items-center gap-2 ${
-              filter === 'rejected' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            <XCircle className="h-4 w-4" /> Rejected
-          </button>
-          <button
-            onClick={fetchPaymentRequests}
-            className="px-4 py-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center gap-2 ml-auto"
-          >
+        <div className="flex gap-2">
+          {['all', 'pending', 'approved', 'rejected'].map((f) => (
+            <button key={f} onClick={() => setFilter(f)} className={`px-4 py-2 rounded-lg capitalize transition ${filter === f ? 'bg-cyan-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
+              {f}
+            </button>
+          ))}
+          <button onClick={fetchPaymentRequests} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center gap-2 ml-auto">
             <RefreshCw className="h-4 w-4" /> Refresh
           </button>
         </div>
@@ -284,7 +236,6 @@ export default function AdminPayments() {
         <div className="bg-white rounded-2xl shadow-lg p-16 text-center">
           <CreditCard className="h-16 w-16 text-gray-300 mx-auto mb-4" />
           <p className="text-xl text-gray-500">No payment requests yet</p>
-          <p className="text-gray-400 mt-2">Requests will appear here when companies make payments</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -293,92 +244,58 @@ export default function AdminPayments() {
             const StatusIcon = StatusBadge.icon;
             
             return (
-              <div key={request.id} className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
-                <div className="p-6">
-                  <div className="flex flex-col md:flex-row justify-between gap-4">
-                    {/* Left side - Company Info */}
-                    <div className="flex-1">
-                      <div className="flex items-start gap-3">
-                        <div className="bg-blue-100 p-3 rounded-xl">
-                          <Building2 className="h-6 w-6 text-blue-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-gray-800 text-lg">{request.companyName || 'Unknown Company'}</h3>
-                          <p className="text-sm text-gray-500">{request.companyEmail}</p>
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">
-                              {request.paymentMethodName || request.paymentMethod}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              {request.createdAt?.toLocaleString('en-PK')}
-                            </span>
-                            {request.planName && (
-                              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
-                                {request.planName} Plan
-                              </span>
-                            )}
-                          </div>
+              <div key={request.id} className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition">
+                <div className="flex flex-col md:flex-row justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-start gap-3">
+                      <div className="bg-blue-100 p-3 rounded-xl"><Building2 className="h-6 w-6 text-blue-600" /></div>
+                      <div>
+                        <h3 className="font-bold text-gray-800 text-lg">{request.companyName || 'Unknown Company'}</h3>
+                        <p className="text-sm text-gray-500">{request.companyEmail}</p>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">{request.paymentMethodName || request.paymentMethod}</span>
+                          <span className="text-xs text-gray-500">{request.createdAt?.toLocaleString()}</span>
+                          {request.planName && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">{request.planName} Plan</span>}
                         </div>
                       </div>
                     </div>
-                    
-                    {/* Right side - Amount & Status */}
-                    <div className="flex flex-col items-end gap-2">
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 ${StatusBadge.bg} ${StatusBadge.text}`}>
-                        <StatusIcon className="h-4 w-4" />
-                        {StatusBadge.label}
-                      </span>
-                      <p className="text-2xl font-bold text-green-600">Rs {request.amount?.toLocaleString()}</p>
-                      <p className="text-sm text-gray-500">{request.creditsToAdd} credits</p>
-                    </div>
                   </div>
-
-                  {/* Screenshot Button */}
-                  {request.screenshotUrl && (
-                    <div className="mt-4">
-                      <button
-                        onClick={() => window.open(request.screenshotUrl, '_blank')}
-                        className="bg-cyan-50 text-cyan-700 px-4 py-2 rounded-lg text-sm flex items-center gap-2 hover:bg-cyan-100 transition"
-                      >
-                        <Upload className="h-4 w-4" /> View Payment Screenshot
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Action Buttons */}
-                  {request.status === 'pending' && (
-                    <div className="mt-4 flex gap-3 pt-4 border-t">
-                      <button
-                        onClick={() => handleApprove(request.id, request.amount, request.companyId, request.creditsToAdd, request.planName)}
-                        className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg text-sm flex items-center gap-2 transition"
-                      >
-                        <CheckCircle className="h-4 w-4" /> Approve & Add Credits
-                      </button>
-                      <button
-                        onClick={() => handleReject(request.id)}
-                        className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg text-sm flex items-center gap-2 transition"
-                      >
-                        <XCircle className="h-4 w-4" /> Reject
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Rejection Reason */}
-                  {request.rejectionReason && (
-                    <div className="mt-3 bg-red-50 p-3 rounded-lg">
-                      <p className="text-sm text-red-700">
-                        <strong>Rejection Reason:</strong> {request.rejectionReason}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Approval Info */}
-                  {request.approvedAt && (
-                    <div className="mt-3 text-xs text-gray-400">
-                      Approved on: {request.approvedAt?.toLocaleString('en-PK')}
-                    </div>
-                  )}
+                  
+                  <div className="flex flex-col items-end gap-2">
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 ${StatusBadge.bg} ${StatusBadge.text}`}>
+                      <StatusIcon className="h-4 w-4" /> {StatusBadge.label}
+                    </span>
+                    <p className="text-2xl font-bold text-green-600">Rs {request.amount?.toLocaleString()}</p>
+                    <p className="text-sm text-gray-500">{request.creditsToAdd} credits</p>
+                  </div>
                 </div>
+
+                {/* Screenshot Button */}
+                {request.screenshotUrl && (
+                  <div className="mt-4">
+                    <button onClick={() => window.open(request.screenshotUrl, '_blank')} className="bg-cyan-50 text-cyan-700 px-4 py-2 rounded-lg text-sm flex items-center gap-2 hover:bg-cyan-100">
+                      <Upload className="h-4 w-4" /> View Payment Screenshot
+                    </button>
+                  </div>
+                )}
+
+                {/* ✅ Action Buttons - Fixed */}
+                {request.status === 'pending' && (
+                  <div className="mt-4 flex gap-3 pt-4 border-t">
+                    <button onClick={() => handleApprove(request.id, request.amount, request.companyId, request.creditsToAdd, request.planName)} className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg text-sm flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4" /> Approve & Add Credits
+                    </button>
+                    <button onClick={() => handleReject(request.id)} className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg text-sm flex items-center gap-2">
+                      <XCircle className="h-4 w-4" /> Reject
+                    </button>
+                  </div>
+                )}
+
+                {request.rejectionReason && (
+                  <div className="mt-3 bg-red-50 p-3 rounded-lg">
+                    <p className="text-sm text-red-700"><strong>Rejection Reason:</strong> {request.rejectionReason}</p>
+                  </div>
+                )}
               </div>
             );
           })}
