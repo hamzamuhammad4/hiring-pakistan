@@ -1,99 +1,189 @@
 // src/app/company/login/page.js
-
 "use client";
 
-import { useState, useEffect } from "react";
-import { auth } from "@/lib/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";  // ← YE LINE ADD KAR DI
+import { auth } from "@/lib/firebase";
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
+import Link from "next/link";
+import toast from 'react-hot-toast';
+import { Briefcase, Mail, Lock, ArrowRight, KeyRound } from "lucide-react";
 
-export default function CompanyLoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+export default function CompanyLogin() {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [forgotMode, setForgotMode] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
 
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        router.push("/company/dashboard");
-      }
-    });
-    return () => unsubscribe();
-  }, [router]);
-
-  const handleLogin = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      toast.success("Login successful!");
       router.push("/company/dashboard");
-    } catch (err) {
-      setError(
-        err.code === "auth/user-not-found" || err.code === "auth/wrong-password"
-          ? "Invalid email or password!"
-          : "Login failed. Please try again."
-      );
+    } catch (error) {
+      console.error(error);
+      if (error.code === 'auth/user-not-found') {
+        toast.error("No account found with this email");
+      } else if (error.code === 'auth/wrong-password') {
+        toast.error("Incorrect password");
+      } else if (error.code === 'auth/too-many-requests') {
+        toast.error("Too many attempts. Try again later.");
+      } else {
+        toast.error(error.message || "Login failed");
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    if (!resetEmail) {
+      toast.error("Please enter your email address");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, resetEmail);
+      toast.success("Password reset email sent! Check your inbox.");
+      setForgotMode(false);
+      setResetEmail("");
+    } catch (error) {
+      console.error(error);
+      if (error.code === 'auth/user-not-found') {
+        toast.error("No account found with this email");
+      } else {
+        toast.error(error.message || "Failed to send reset email");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Forgot Password Mode
+  if (forgotMode) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8">
+          <div className="text-center mb-6">
+            <div className="bg-cyan-100 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3">
+              <KeyRound className="h-7 w-7 text-cyan-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-800">Reset Password</h1>
+            <p className="text-gray-500 text-sm mt-1">We'll send you a reset link</p>
+          </div>
+
+          <form onSubmit={handleForgotPassword} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="email"
+                  required
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-500"
+                  placeholder="your@email.com"
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-3 rounded-xl transition disabled:opacity-70"
+            >
+              {loading ? "Sending..." : "Send Reset Link"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setForgotMode(false)}
+              className="w-full text-gray-500 hover:text-gray-700 text-sm"
+            >
+              ← Back to Login
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // Normal Login Mode
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        <h1 className="text-4xl font-bold text-center text-gray-800 mb-6">
-          Company Login
-        </h1>
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6 text-center">
-            {error}
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8">
+        
+        {/* Logo */}
+        <div className="text-center mb-6">
+          <div className="bg-gradient-to-r from-cyan-600 to-blue-700 w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-md">
+            <Briefcase className="h-7 w-7 text-white" />
           </div>
-        )}
+          <h1 className="text-2xl font-bold text-gray-800">Company Login</h1>
+          <p className="text-gray-500 text-sm mt-1">Access your company dashboard</p>
+        </div>
 
-        <form onSubmit={handleLogin} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-lg font-medium text-gray-700 mb-2">
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-5 py-4 rounded-xl border border-gray-300 focus:border-cyan-500 outline-none"
-              required
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-2">Company Email</label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="email"
+                required
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-500"
+                placeholder="hr@yourcompany.com"
+              />
+            </div>
           </div>
 
           <div>
-            <label className="block text-lg font-medium text-gray-700 mb-2">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-5 py-4 rounded-xl border border-gray-300 focus:border-cyan-500 outline-none"
-              required
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="password"
+                required
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-500"
+                placeholder="Enter your password"
+              />
+            </div>
+          </div>
+
+          {/* Forgot Password Link */}
+          <div className="text-right">
+            <button
+              type="button"
+              onClick={() => setForgotMode(true)}
+              className="text-sm text-cyan-600 hover:text-cyan-700 flex items-center justify-end gap-1"
+            >
+              <KeyRound className="h-3 w-3" /> Forgot Password?
+            </button>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-700 hover:to-blue-800 text-white font-bold py-5 rounded-2xl shadow-xl transform hover:scale-105 transition-all disabled:opacity-70"
+            className="w-full bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-700 hover:to-blue-800 text-white font-semibold py-3 rounded-xl transition disabled:opacity-70"
           >
             {loading ? "Logging in..." : "Login to Dashboard"}
           </button>
         </form>
 
-        <p className="text-center mt-8 text-gray-600">
+        <p className="text-center mt-6 text-sm text-gray-600">
           Don't have a company account?{" "}
-          <Link href="/company/signup" className="text-cyan-600 font-bold hover:underline">
+          <Link href="/company/signup" className="text-cyan-600 font-semibold hover:underline">
             Register here
           </Link>
         </p>
