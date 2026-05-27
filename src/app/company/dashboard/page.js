@@ -426,44 +426,78 @@ export default function CompanyDashboard() {
 
         {/* Pending Jobs Section */}
         {pendingJobs.length > 0 && (
-          <div className="mb-8">
-            <div className="flex items-center gap-2 mb-4">
-              <Clock className="h-6 w-6 text-orange-600" />
-              <h2 className="text-2xl font-bold text-gray-800">Pending Approval</h2>
+  <div className="mb-8">
+    <div className="flex items-center gap-2 mb-4">
+      <Clock className="h-6 w-6 text-orange-600" />
+      <h2 className="text-2xl font-bold text-gray-800">Pending Approval</h2>
+    </div>
+    <div className="bg-orange-50 border-l-4 border-orange-500 rounded-xl p-4 mb-4">
+      <p className="text-sm text-orange-800 flex items-center gap-2">
+        <Clock className="h-4 w-4" />
+        {pendingJobs.length} job(s) waiting for admin approval. Once approved, they will appear on the website.
+      </p>
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      {pendingJobs.map((job) => (
+        <div key={job.id} className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-orange-500 overflow-hidden">
+          <div className="p-5">
+            {/* Job Title and Status */}
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <h3 className="font-bold text-lg text-gray-800">{job.title}</h3>
+                <p className="text-sm text-gray-500 mt-0.5">{job.companyName}</p>
+              </div>
+              <span className="bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded-full font-medium flex items-center gap-1">
+                <Clock className="h-3 w-3" /> Pending
+              </span>
             </div>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-4">
-              <p className="text-sm text-yellow-800 flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                {pendingJobs.length} job(s) waiting for admin approval. Once approved, they will appear on the website.
-              </p>
+            
+            {/* Location, Job Type, Salary - Colored Badges */}
+            <div className="flex flex-wrap gap-2 mt-3 mb-3">
+              {job.location && (
+                <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-xs px-3 py-1.5 rounded-lg font-medium">
+                  <MapPin className="h-3 w-3" /> {job.location}
+                </span>
+              )}
+              {job.type && (
+                <span className="inline-flex items-center gap-1 bg-purple-50 text-purple-700 text-xs px-3 py-1.5 rounded-lg font-medium">
+                  <Briefcase className="h-3 w-3" /> {job.type}
+                </span>
+              )}
+              {job.salary && (
+                <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 text-xs px-3 py-1.5 rounded-lg font-medium">
+                  <DollarSign className="h-3 w-3" /> {job.salary}
+                </span>
+              )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {pendingJobs.map((job) => (
-                <div key={job.id} className="bg-white rounded-xl shadow-md p-4 border-l-4 border-orange-500">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-bold text-gray-800">{job.title}</h3>
-                      <p className="text-sm text-gray-600">{job.companyName}</p>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full">Pending</span>
-                        <span className="text-xs text-gray-500">{job.location || "Pakistan"}</span>
-                        <span className="text-xs text-gray-500">{job.type || "Full Time"}</span>
-                      </div>
-                    </div>
-                    <span className="text-xs text-gray-400">
-                      {job.createdAt?.toDate?.()?.toLocaleDateString() || "Recent"}
-                    </span>
-                  </div>
-                  <div className="mt-3 pt-2 border-t flex gap-2">
-                    <Link href={`/company/edit-job/${job.id}`} className="text-blue-600 text-xs hover:underline">Edit</Link>
-                    <button onClick={() => handleDelete(job.id)} className="text-red-600 text-xs hover:underline">Delete</button>
-                    <Link href={`/jobs/${job.id}`} target="_blank" className="text-cyan-600 text-xs hover:underline">Preview</Link>
-                  </div>
-                </div>
-              ))}
+            
+            {/* Posted Date */}
+            <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              Posted: {job.createdAt?.toDate?.()?.toLocaleDateString() || "Recent"}
+            </p>
+            
+            {/* Action Buttons - Only Edit and Delete (No Preview) */}
+            <div className="mt-4 pt-3 border-t border-gray-100 flex gap-4">
+              <Link 
+                href={`/company/edit-job/${job.id}`} 
+                className="text-blue-600 text-sm hover:text-blue-800 transition flex items-center gap-1"
+              >
+                <Edit className="h-3.5 w-3.5" /> Edit
+              </Link>
+              <button 
+                onClick={() => handleDelete(job.id)} 
+                className="text-red-600 text-sm hover:text-red-800 transition flex items-center gap-1"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Delete
+              </button>
             </div>
           </div>
-        )}
+        </div>
+      ))}
+    </div>
+  </div>
+)}
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
