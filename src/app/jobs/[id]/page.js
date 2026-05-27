@@ -1,5 +1,4 @@
-// src/app/jobs/[id]/page.js   ← YE PURA REPLACE KAR DE (Compact + Elegant UI)
-
+// src/app/jobs/[id]/page.js
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import Link from "next/link";
@@ -40,6 +39,26 @@ export default async function SingleJobPage({ params }) {
 
     const job = { id: jobDoc.id, ...jobDoc.data() };
 
+    // ✅ Security Check: Only show if job is active
+    if (job.status !== "active") {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center p-8 bg-white rounded-2xl shadow-lg">
+            <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl">⏳</span>
+            </div>
+            <h1 className="text-2xl font-bold text-yellow-600 mb-3">Job Not Available Yet</h1>
+            <p className="text-gray-600 mb-4">
+              This job is pending admin approval and will be available soon.
+            </p>
+            <Link href="/jobs" className="text-cyan-600 hover:underline">
+              ← Back to Jobs
+            </Link>
+          </div>
+        </div>
+      );
+    }
+
     const postedDate = job.createdAt
       ? new Date(job.createdAt.toDate ? job.createdAt.toDate() : job.createdAt.seconds * 1000).toLocaleDateString()
       : "Recent";
@@ -58,7 +77,7 @@ export default async function SingleJobPage({ params }) {
               <div className="flex flex-col md:flex-row gap-6 items-start">
                 {/* Logo */}
                 <div className="w-20 h-20 md:w-24 md:h-24 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center text-5xl font-bold">
-                  {job.companyName?.[0]?.toUpperCase() || "C"}
+                  H
                 </div>
 
                 <div className="flex-1">
