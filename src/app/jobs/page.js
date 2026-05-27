@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import Link from "next/link";
 import { Briefcase, MapPin, DollarSign, Building2, Calendar, Eye } from "lucide-react";
 
@@ -18,8 +18,8 @@ export default function JobsPage() {
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      // ✅ REMOVED orderBy - No index needed
-      const jobsQuery = query(collection(db, "jobs"));
+      // ✅ Only fetch active jobs (admin approved)
+      const jobsQuery = query(collection(db, "jobs"), where("status", "==", "active"));
       const snapshot = await getDocs(jobsQuery);
       
       const jobsList = snapshot.docs.map(doc => ({
@@ -82,7 +82,7 @@ export default function JobsPage() {
           <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
             <Briefcase className="h-16 w-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-800 mb-2">No jobs found</h3>
-            <p className="text-gray-500">Please add jobs from admin panel or Firebase Console</p>
+            <p className="text-gray-500">Please check back later for new opportunities.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -93,8 +93,9 @@ export default function JobsPage() {
                     <h3 className="text-xl font-bold text-gray-800 hover:text-cyan-600">
                       <Link href={`/jobs/${job.id}`}>{job.title || "No Title"}</Link>
                     </h3>
+                    {/* ✅ Company Name - Show "Hiring Pakistan" instead of actual company name */}
                     <p className="text-gray-600 flex items-center gap-1 mt-1">
-                      <Building2 className="h-4 w-4" /> {job.companyName || "Unknown Company"}
+                      <Building2 className="h-4 w-4" /> Hiring Pakistan
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2 mb-4">
