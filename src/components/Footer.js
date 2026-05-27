@@ -137,27 +137,27 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Newsletter Section - WORKING */}
+        {/* ✅ Newsletter Section - Mobile Responsive Fixed */}
         <div className="border-t border-gray-800 mt-8 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div>
+            <div className="text-center md:text-left">
               <h3 className="text-white font-bold text-lg">Subscribe to Newsletter</h3>
               <p className="text-gray-400 text-sm">Get latest job updates and career tips</p>
             </div>
-            <div className="flex flex-col w-full md:w-auto">
-              <div className="flex w-full">
+            <div className="w-full md:w-auto">
+              <div className="flex flex-col sm:flex-row w-full gap-2">
                 <input
                   type="email"
                   value={newsletterEmail}
                   onChange={(e) => setNewsletterEmail(e.target.value)}
                   placeholder="Your email address"
-                  className="flex-1 md:w-80 px-4 py-3 rounded-l-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-cyan-500"
+                  className="flex-1 px-4 py-3 rounded-lg sm:rounded-l-lg sm:rounded-r-none bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-cyan-500"
                   disabled={newsletterLoading}
                 />
                 <button 
                   onClick={handleNewsletterSubscribe}
                   disabled={newsletterLoading}
-                  className="bg-cyan-600 hover:bg-cyan-700 px-6 py-3 rounded-r-lg transition flex items-center gap-2 disabled:opacity-50"
+                  className="bg-cyan-600 hover:bg-cyan-700 px-6 py-3 rounded-lg sm:rounded-r-lg sm:rounded-l-none transition flex items-center justify-center gap-2 disabled:opacity-50 whitespace-nowrap"
                 >
                   <Send className="h-4 w-4" /> 
                   {newsletterLoading ? 'Subscribing...' : 'Subscribe'}
