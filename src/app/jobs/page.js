@@ -1,7 +1,7 @@
 // src/app/jobs/[id]/page.js
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, updateDoc, increment } from "firebase/firestore";
@@ -15,67 +15,60 @@ export default function SingleJobPage() {
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [viewsUpdated, setViewsUpdated] = useState(false);
+
+  const fetchJob = useCallback(async () => {
+    if (!id) return;
+    
+    try {
+      setLoading(true);
+      console.log("Fetching job ID:", id);
+      
+      const jobRef = doc(db, "jobs", id);
+      const jobDoc = await getDoc(jobRef);
+
+      if (!jobDoc.exists()) {
+        setError("Job Not Found");
+        return;
+      }
+
+      const jobData = { id: jobDoc.id, ...jobDoc.data() };
+
+      if (jobData.status !== "active") {
+        setError("Job Not Available Yet");
+        return;
+      }
+
+      setJob(jobData);
+
+      // Update views only once
+      if (!viewsUpdated) {
+        await updateDoc(jobRef, {
+          views: increment(1)
+        });
+        setViewsUpdated(true);
+        console.log("Views updated for:", jobData.title);
+      }
+
+    } catch (err) {
+      console.error("Error:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [id, viewsUpdated]);
 
   useEffect(() => {
-    // ✅ Debug: Check if id exists
-    console.log("Params:", params);
-    console.log("Job ID:", id);
-    
-    if (!id) {
-      console.log("No ID found, waiting for params...");
-      return;
-    }
-
-    const fetchJob = async () => {
-      try {
-        setLoading(true);
-        console.log("Fetching job with ID:", id);
-        
-        const jobRef = doc(db, "jobs", id);
-        const jobDoc = await getDoc(jobRef);
-
-        if (!jobDoc.exists()) {
-          setError("Job Not Found");
-          setLoading(false);
-          return;
-        }
-
-        const jobData = { id: jobDoc.id, ...jobDoc.data() };
-        console.log("Job found:", jobData.title, "Status:", jobData.status);
-
-        if (jobData.status !== "active") {
-          setError("Job Not Available Yet");
-          setLoading(false);
-          return;
-        }
-
-        setJob(jobData);
-
-        // ✅ Update views count
-        try {
-          await updateDoc(jobRef, {
-            views: increment(1)
-          });
-          console.log("✅ Views incremented for:", jobData.title);
-        } catch (updateErr) {
-          console.error("Views update error:", updateErr.message);
-        }
-
-      } catch (err) {
-        console.error("Fetch error:", err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchJob();
-  }, [id, params]);
+  }, [fetchJob]);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading job details...</p>
+        </div>
       </div>
     );
   }
