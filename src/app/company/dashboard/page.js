@@ -463,7 +463,7 @@ export default function CompanyDashboard() {
         </div>
 
         {/* Recent Applications */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-12">
+        {/* <div className="bg-white rounded-2xl shadow-lg p-6 mb-12">
           <div className="flex items-center gap-2 mb-6">
             <Users className="h-6 w-6 text-cyan-600" />
             <h2 className="text-2xl font-bold text-gray-800">Recent Applications</h2>
@@ -491,7 +491,7 @@ export default function CompanyDashboard() {
               ))}
             </div>
           )}
-        </div>
+        </div> */}
 
         {/* Active Jobs */}
         <div>
