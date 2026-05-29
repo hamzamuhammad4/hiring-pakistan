@@ -13,7 +13,6 @@ export default function SingleJobPage() {
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [viewsUpdated, setViewsUpdated] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -22,8 +21,10 @@ export default function SingleJobPage() {
       return;
     }
 
-    const fetchAndUpdateJob = async () => {
+    const fetchJob = async () => {
       try {
+        console.log("Fetching job with ID:", id);
+        
         const jobRef = doc(db, "jobs", id);
         const jobDoc = await getDoc(jobRef);
 
@@ -34,6 +35,7 @@ export default function SingleJobPage() {
         }
 
         const jobData = { id: jobDoc.id, ...jobDoc.data() };
+        console.log("Job data:", jobData.title, "Status:", jobData.status);
 
         if (jobData.status !== "active") {
           setError("Job Not Available Yet");
@@ -43,25 +45,26 @@ export default function SingleJobPage() {
 
         setJob(jobData);
 
-        // ✅ Update views count only once per session
-        if (!viewsUpdated) {
+        // ✅ Update views count
+        try {
           await updateDoc(jobRef, {
             views: increment(1)
           });
-          setViewsUpdated(true);
-          console.log("✅ Views incremented for job:", id);
+          console.log("Views incremented for job:", id);
+        } catch (err) {
+          console.error("Views update error:", err);
         }
 
       } catch (err) {
-        console.error("Error:", err);
+        console.error("Fetch error:", err);
         setError(err.message);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAndUpdateJob();
-  }, [id, viewsUpdated]);
+    fetchJob();
+  }, [id]);
 
   if (loading) {
     return (
@@ -71,13 +74,13 @@ export default function SingleJobPage() {
     );
   }
 
-  if (error) {
+  if (error || !job) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center p-8 bg-white rounded-2xl shadow-lg">
-          <h1 className="text-3xl font-bold text-red-600 mb-3">{error}</h1>
-          <button onClick={() => router.back()} className="text-cyan-600 hover:underline">
-            ← Back to Jobs
+          <h1 className="text-3xl font-bold text-red-600 mb-3">{error || "Something went wrong"}</h1>
+          <button onClick={() => router.push("/jobs")} className="text-cyan-600 hover:underline">
+            ← Browse All Jobs
           </button>
         </div>
       </div>
@@ -92,7 +95,7 @@ export default function SingleJobPage() {
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
         <button
-          onClick={() => router.back()}
+          onClick={() => router.push("/jobs")}
           className="inline-flex items-center gap-2 text-cyan-600 hover:text-cyan-700 font-medium mb-6 text-lg"
         >
           ← Back to Jobs
@@ -101,9 +104,7 @@ export default function SingleJobPage() {
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
           <div className="bg-gradient-to-r from-cyan-600 to-blue-700 text-white p-6 md:p-8">
             <div className="flex flex-col md:flex-row gap-6 items-start">
-              <div className="w-20 h-20 md:w-24 md:h-24 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center text-5xl font-bold">
-                H
-              </div>
+              <div className="w-20 h-20 md:w-24 md:h-24 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center text-5xl font-bold">H</div>
               <div className="flex-1">
                 <h1 className="text-3xl md:text-4xl font-extrabold mb-2">{job.title}</h1>
                 <p className="text-xl opacity-90 mb-3">Hiring Pakistan</p>
@@ -118,18 +119,9 @@ export default function SingleJobPage() {
 
           <div className="p-6 md:p-8">
             <div className="grid md:grid-cols-3 gap-6 mb-8">
-              <div>
-                <p className="text-gray-500 text-sm mb-1">Salary</p>
-                <p className="text-2xl font-bold text-green-600">{job.salary || "Negotiable"}</p>
-              </div>
-              <div>
-                <p className="text-gray-500 text-sm mb-1">Experience</p>
-                <p className="text-2xl font-semibold">{job.experience || "Not specified"}</p>
-              </div>
-              <div>
-                <p className="text-gray-500 text-sm mb-1">Posted</p>
-                <p className="text-2xl font-semibold">{postedDate}</p>
-              </div>
+              <div><p className="text-gray-500 text-sm mb-1">Salary</p><p className="text-2xl font-bold text-green-600">{job.salary || "Negotiable"}</p></div>
+              <div><p className="text-gray-500 text-sm mb-1">Experience</p><p className="text-2xl font-semibold">{job.experience || "Not specified"}</p></div>
+              <div><p className="text-gray-500 text-sm mb-1">Posted</p><p className="text-2xl font-semibold">{postedDate}</p></div>
             </div>
 
             <div className="prose max-w-none text-gray-700 leading-relaxed text-base">
@@ -138,10 +130,7 @@ export default function SingleJobPage() {
             </div>
 
             <div className="mt-10 text-center">
-              <Link
-                href={`/apply/${job.id}`}
-                className="inline-block bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold text-xl px-12 py-5 rounded-2xl shadow-xl transform hover:scale-105 transition-all duration-300"
-              >
+              <Link href={`/apply/${job.id}`} className="inline-block bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold text-xl px-12 py-5 rounded-2xl shadow-xl transform hover:scale-105 transition-all duration-300">
                 Apply Now — It's Free!
               </Link>
             </div>
