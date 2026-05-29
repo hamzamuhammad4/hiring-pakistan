@@ -9,20 +9,26 @@ import Link from "next/link";
 
 export default function SingleJobPage() {
   const router = useRouter();
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id;
+  
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    // ✅ Debug: Check if id exists
+    console.log("Params:", params);
+    console.log("Job ID:", id);
+    
     if (!id) {
-      setError("Invalid Job ID");
-      setLoading(false);
+      console.log("No ID found, waiting for params...");
       return;
     }
 
     const fetchJob = async () => {
       try {
+        setLoading(true);
         console.log("Fetching job with ID:", id);
         
         const jobRef = doc(db, "jobs", id);
@@ -35,7 +41,7 @@ export default function SingleJobPage() {
         }
 
         const jobData = { id: jobDoc.id, ...jobDoc.data() };
-        console.log("Job data:", jobData.title, "Status:", jobData.status);
+        console.log("Job found:", jobData.title, "Status:", jobData.status);
 
         if (jobData.status !== "active") {
           setError("Job Not Available Yet");
@@ -50,9 +56,9 @@ export default function SingleJobPage() {
           await updateDoc(jobRef, {
             views: increment(1)
           });
-          console.log("Views incremented for job:", id);
-        } catch (err) {
-          console.error("Views update error:", err);
+          console.log("✅ Views incremented for:", jobData.title);
+        } catch (updateErr) {
+          console.error("Views update error:", updateErr.message);
         }
 
       } catch (err) {
@@ -64,7 +70,7 @@ export default function SingleJobPage() {
     };
 
     fetchJob();
-  }, [id]);
+  }, [id, params]);
 
   if (loading) {
     return (
@@ -78,10 +84,10 @@ export default function SingleJobPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center p-8 bg-white rounded-2xl shadow-lg">
-          <h1 className="text-3xl font-bold text-red-600 mb-3">{error || "Something went wrong"}</h1>
-          <button onClick={() => router.push("/jobs")} className="text-cyan-600 hover:underline">
+          <h1 className="text-3xl font-bold text-red-600 mb-3">{error || "Job Not Found"}</h1>
+          <Link href="/jobs" className="text-cyan-600 hover:underline">
             ← Browse All Jobs
-          </button>
+          </Link>
         </div>
       </div>
     );
@@ -94,12 +100,12 @@ export default function SingleJobPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
-        <button
-          onClick={() => router.push("/jobs")}
+        <Link
+          href="/jobs"
           className="inline-flex items-center gap-2 text-cyan-600 hover:text-cyan-700 font-medium mb-6 text-lg"
         >
           ← Back to Jobs
-        </button>
+        </Link>
 
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
           <div className="bg-gradient-to-r from-cyan-600 to-blue-700 text-white p-6 md:p-8">
