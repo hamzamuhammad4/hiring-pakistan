@@ -1,50 +1,54 @@
-import Link from "next/link";  // ← YE LINE ZAROORI HAI
+// src/components/JobCard.js
+import Link from "next/link";
+import { Briefcase, MapPin, DollarSign, Eye, Users, Calendar, Building2 } from "lucide-react";
 
 export default function JobCard({ job }) {
-  // Safe date handling
-  const postedDate = job.createdAt 
+  const postedDate = job.createdAt
     ? new Date(job.createdAt).toLocaleDateString("en-GB", {
         day: "numeric",
         month: "short",
         year: "numeric",
-      }) 
+      })
     : "Recent";
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 border border-gray-200">
-      {/* Header */}
-      <div className="p-5 border-b border-gray-100">
-        <h3 className="text-xl font-bold text-gray-800 line-clamp-2">{job.title}</h3>
-        <p className="text-gray-600 mt-1">Hiring Pakistan</p>
-      </div>
-
-      {/* Details */}
+    <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition">
       <div className="p-5">
-        <div className="flex flex-wrap gap-3 mb-4">
-          <span className="bg-cyan-50 text-cyan-700 px-3 py-1 rounded-full text-sm font-medium">
-            {job.location || "Karachi"}
+        <div className="flex justify-between items-start mb-3">
+          <h3 className="text-xl font-bold text-gray-800 hover:text-cyan-600">
+            <Link href={`/jobs/${job.id}`}>{job.title}</Link>
+          </h3>
+        </div>
+        <p className="text-gray-600 flex items-center gap-1 mt-1">
+          <Building2 className="h-4 w-4" /> Hiring Pakistan
+        </p>
+        <div className="flex flex-wrap gap-2 mb-4 mt-2">
+          <span className="bg-cyan-100 text-cyan-800 px-2 py-1 rounded-full text-xs flex items-center gap-1">
+            <MapPin className="h-3 w-3" /> {job.location || "Pakistan"}
           </span>
-          <span className="bg-cyan-50 text-cyan-700 px-3 py-1 rounded-full text-sm font-medium">
+          <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full text-xs">
             {job.type || "Full Time"}
           </span>
-          <span className="bg-green-50 text-green-700 px-3 py-1 rounded-full text-sm font-medium font-bold">
-            {job.salary || "Negotiable"}
+          <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+            <DollarSign className="h-3 w-3" /> {job.salary || "Negotiable"}
           </span>
         </div>
-
-        {/* Description Preview */}
-        <p className="text-gray-600 mb-4 line-clamp-3">
-          {job.description || "No description available."}
+        <div className="flex justify-between text-sm text-gray-500 mb-3">
+          <span className="flex items-center gap-1"><Eye className="h-4 w-4" /> {job.views || 0} views</span>
+          <span className="flex items-center gap-1"><Users className="h-4 w-4" /> {job.applicantsCount || 0} applicants</span>
+        </div>
+        <p className="text-gray-600 text-sm line-clamp-2 mb-3">
+          {job.description?.substring(0, 100)}...
         </p>
-
-        {/* Posted Date & View Details */}
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-500">Posted: {postedDate}</span>
+        <div className="flex justify-between items-center pt-3 border-t">
+          <span className="text-xs text-gray-400 flex items-center gap-1">
+            <Calendar className="h-3 w-3" /> Posted: {postedDate}
+          </span>
           <Link
             href={`/jobs/${job.id}`}
-            className="bg-cyan-600 hover:bg-cyan-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition"
+            className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
           >
-            View Details
+            View Details →
           </Link>
         </div>
       </div>

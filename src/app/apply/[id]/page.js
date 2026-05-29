@@ -4,10 +4,10 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, addDoc, collection, serverTimestamp, updateDoc, increment } from "firebase/firestore";
 import Link from "next/link";
 import toast from 'react-hot-toast';
-import { Briefcase, Building2, User, Mail, Phone, MapPin, Upload, ChevronLeft, CheckCircle } from "lucide-react";
+import { Briefcase, Building2, User, Mail, Phone, MapPin, FileText, Upload, ChevronLeft, CheckCircle, AlertCircle } from "lucide-react";
 
 export default function ApplyPage() {
   const { id } = useParams();
@@ -16,13 +16,7 @@ export default function ApplyPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    fullName: "", 
-    email: "", 
-    phone: "", 
-    city: "", 
-    experience: "", 
-    skills: "", 
-    coverLetter: ""
+    fullName: "", email: "", phone: "", city: "", experience: "", skills: "", coverLetter: ""
   });
   const [cvFile, setCvFile] = useState(null);
   const [cvPreview, setCvPreview] = useState(null);
@@ -86,7 +80,7 @@ export default function ApplyPage() {
       
       const cvUrl = uploadData.url;
 
-      // ✅ Save application to Firestore - NO USER AUTH NEEDED
+      // Save application to Firestore
       await addDoc(collection(db, "applications"), {
         jobId: id, 
         jobTitle: job.title, 
@@ -97,6 +91,12 @@ export default function ApplyPage() {
         status: "pending", 
         appliedAt: serverTimestamp(), 
         createdAt: serverTimestamp()
+      });
+
+      // ✅ UPDATE applicants count in job
+      const jobRef = doc(db, "jobs", id);
+      await updateDoc(jobRef, {
+        applicantsCount: increment(1)
       });
 
       toast.success("Application submitted successfully!");
@@ -192,11 +192,6 @@ export default function ApplyPage() {
               </button>
             </form>
           </div>
-        </div>
-        
-        {/* No Login Required Note */}
-        <div className="mt-4 text-center text-sm text-gray-500">
-          <p>✅ No account required. Your application will be sent directly to the employer.</p>
         </div>
       </div>
     </div>
