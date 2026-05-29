@@ -81,7 +81,7 @@ export default function ApplicantsPage() {
     }
   };
 
-  // ✅ FIXED: CV View with proper credit deduction
+  // CV View with credit deduction
   const handleViewCV = async (application) => {
     const cvUrl = application.cvUrl || application.cv;
     
@@ -120,18 +120,13 @@ export default function ApplicantsPage() {
       const user = auth.currentUser;
       const companyRef = doc(db, "companies", user.uid);
       
-      // ✅ Deduct 1 credit using increment
+      // Deduct 1 credit
       await updateDoc(companyRef, {
         credits: increment(-1)
       });
       
-      // Update local state
       setCompanyCredits(prev => prev - 1);
-      
-      // Show success message
       toast.success(`1 credit deducted. Remaining credits: ${companyCredits - 1}`);
-      
-      // ✅ Open CV in new tab - NO PAGE REFRESH
       window.open(cvUrl, '_blank');
       
     } catch (err) {
@@ -174,7 +169,11 @@ export default function ApplicantsPage() {
             <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
               Total: {applications.length} applications
             </span>
-            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${companyCredits < 5 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+              companyCredits === 0 ? 'bg-red-100 text-red-800' : 
+              companyCredits < 5 ? 'bg-yellow-100 text-yellow-800' : 
+              'bg-green-100 text-green-800'
+            }`}>
               Credits: {companyCredits}
             </span>
             <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm">
@@ -182,10 +181,14 @@ export default function ApplicantsPage() {
             </span>
           </div>
           
-          {companyCredits < 5 && (
-            <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-xl p-3 flex items-center justify-between">
-              <span className="text-sm text-yellow-800">⚠️ Low on credits! Buy more to view CVs.</span>
-              <Link href="/company/funds" className="bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-yellow-700">
+          {/* ✅ Only show warning when credits = 0 */}
+          {companyCredits === 0 && (
+            <div className="mt-4 bg-red-50 border border-red-200 rounded-xl p-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+                <span className="text-sm text-red-800 font-medium">No credits available! Buy credits to view CVs.</span>
+              </div>
+              <Link href="/company/funds" className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700">
                 Buy Credits
               </Link>
             </div>
@@ -208,15 +211,26 @@ export default function ApplicantsPage() {
                       </div>
                       <div>
                         <h3 className="text-xl font-bold text-gray-800">{app.fullName || app.name}</h3>
-                        <div className="flex flex-wrap gap-3 mt-1 text-sm text-gray-500">
-                          <span className="flex items-center gap-1"><Mail className="h-4 w-4" /> {app.email}</span>
-                          <span className="flex items-center gap-1"><Phone className="h-4 w-4" /> {app.phone || 'N/A'}</span>
-                          <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {app.city || 'N/A'}</span>
-                        </div>
+                        {/* ✅ Email, Phone, City - REMOVED */}
+                        {/* Only Cover Letter shows now */}
                         {app.coverLetter && (
                           <p className="mt-2 text-gray-600 text-sm bg-gray-50 p-2 rounded">
                             <strong>Cover Letter:</strong> {app.coverLetter}
                           </p>
+                        )}
+                        {app.experience && (
+                          <p className="mt-2 text-gray-600 text-sm">
+                            <strong>Experience:</strong> {app.experience}
+                          </p>
+                        )}
+                        {app.skills && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {app.skills.split(',').map((skill, idx) => (
+                              <span key={idx} className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">
+                                {skill.trim()}
+                              </span>
+                            ))}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -234,7 +248,7 @@ export default function ApplicantsPage() {
                       <option value="rejected">❌ Rejected</option>
                     </select>
 
-                    {/* ✅ CV Button with Credit Check */}
+                    {/* CV Button */}
                     <button
                       onClick={() => handleViewCV(app)}
                       disabled={companyCredits < 1 || viewingCV === app.id}
