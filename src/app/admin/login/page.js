@@ -9,7 +9,7 @@ import Link from "next/link";
 import toast from 'react-hot-toast';
 import { Briefcase, Mail, Lock, ArrowRight } from "lucide-react";
 
-// ✅ Admin emails - APNI EMAIL DAALO
+
 const adminEmails = [
   "firebasehiringpakistan@gmail.com",
   "hamzaayyub125@gmail.com",
