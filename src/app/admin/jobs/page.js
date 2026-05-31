@@ -7,15 +7,17 @@ import {
   collection, getDocs, doc, updateDoc, deleteDoc,
   query, where, orderBy 
 } from "firebase/firestore";
+import { useRouter } from "next/navigation";
 import toast from 'react-hot-toast';
 import { 
   Briefcase, Search, CheckCircle, XCircle, 
   Eye, Trash2, Clock, Building2, MapPin, DollarSign,
-  Filter, ExternalLink, AlertTriangle, RefreshCw
+  Filter, ExternalLink, AlertTriangle, RefreshCw, Edit
 } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminJobs() {
+  const router = useRouter();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -62,24 +64,20 @@ export default function AdminJobs() {
     }
   };
 
-  // ✅ FIXED: Approve function with proper status update
   const handleApprove = async (jobId) => {
     try {
-      // Update Firestore
       await updateDoc(doc(db, "jobs", jobId), {
         status: 'active',
         approvedAt: new Date(),
         approvedBy: 'admin'
       });
       
-      // Update local state immediately
       setJobs(prevJobs => 
         prevJobs.map(job => 
           job.id === jobId ? { ...job, status: 'active' } : job
         )
       );
       
-      // Update stats
       setStats(prev => ({
         ...prev,
         pending: prev.pending - 1,
@@ -94,7 +92,6 @@ export default function AdminJobs() {
     }
   };
 
-  // ✅ FIXED: Reject function
   const handleReject = async (jobId) => {
     const reason = prompt("Please enter reason for rejection:");
     if (!reason) return;
@@ -133,7 +130,6 @@ export default function AdminJobs() {
       await deleteDoc(doc(db, "jobs", jobId));
       setJobs(prevJobs => prevJobs.filter(job => job.id !== jobId));
       
-      // Update stats
       const deletedJob = jobs.find(j => j.id === jobId);
       if (deletedJob) {
         if (deletedJob.status === 'pending') {
@@ -150,6 +146,11 @@ export default function AdminJobs() {
       console.error("Error deleting job:", err);
       toast.error("Failed to delete job");
     }
+  };
+
+  // ✅ EDIT FUNCTION
+  const handleEdit = (jobId) => {
+    router.push(`/admin/jobs/edit/${jobId}`);
   };
 
   const filteredJobs = jobs.filter(job => {
@@ -345,6 +346,13 @@ export default function AdminJobs() {
                     )}
 
                     <div className="flex gap-2">
+                      {/* ✅ EDIT BUTTON ADDED */}
+                      <button
+                        onClick={() => handleEdit(job.id)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg text-sm flex items-center gap-1"
+                      >
+                        <Edit className="h-4 w-4" /> Edit
+                      </button>
                       <Link
                         href={`/jobs/${job.id}`}
                         target="_blank"
