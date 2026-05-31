@@ -12,7 +12,7 @@ import {
   CreditCard, TrendingUp, DollarSign, 
   Calendar, AlertTriangle, CheckCircle,
   XCircle, Eye, Clock, Building2, Upload,
-  RefreshCw, Filter
+  RefreshCw, Filter, Star
 } from "lucide-react";
 import Link from "next/link";
 
@@ -83,7 +83,7 @@ export default function AdminPayments() {
   };
 
   const handleApprove = async (requestId, amount, companyId, creditsToAdd, planName) => {
-    if (!confirm(`✅ Approve payment of Rs ${amount.toLocaleString()}?\n\n${creditsToAdd} credits will be added.`)) return;
+    if (!confirm(`✅ Approve payment of PKR ${amount.toLocaleString()}?\n\n${creditsToAdd} credits will be added.`)) return;
     
     try {
       await updateDoc(doc(db, "payment_requests", requestId), {
@@ -176,20 +176,20 @@ export default function AdminPayments() {
     <div>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800">💰 Payment Requests</h1>
-        <p className="text-gray-500 mt-1">Verify and approve manual payment requests</p>
+        <p className="text-gray-500 mt-1">Verify and approve manual payment requests from companies</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="bg-green-50 rounded-2xl p-6">
           <div className="flex items-center gap-4">
             <div className="bg-green-500 p-3 rounded-xl"><DollarSign className="h-6 w-6 text-white" /></div>
-            <div><p className="text-2xl font-bold text-green-700">Rs {stats.totalRevenue.toLocaleString()}</p><p className="text-green-600">Total Revenue</p></div>
+            <div><p className="text-2xl font-bold text-green-700">PKR {stats.totalRevenue.toLocaleString()}</p><p className="text-green-600">Total Revenue</p></div>
           </div>
         </div>
         <div className="bg-yellow-50 rounded-2xl p-6">
           <div className="flex items-center gap-4">
             <div className="bg-yellow-500 p-3 rounded-xl"><Clock className="h-6 w-6 text-white" /></div>
-            <div><p className="text-2xl font-bold text-yellow-700">Rs {stats.pendingAmount.toLocaleString()}</p><p className="text-yellow-600">Pending Amount</p></div>
+            <div><p className="text-2xl font-bold text-yellow-700">PKR {stats.pendingAmount.toLocaleString()}</p><p className="text-yellow-600">Pending Amount</p></div>
           </div>
         </div>
         <div className="bg-blue-50 rounded-2xl p-6">
@@ -239,9 +239,18 @@ export default function AdminPayments() {
                       <div>
                         <h3 className="font-bold text-gray-800 text-lg">{request.companyName || 'Unknown Company'}</h3>
                         <p className="text-sm text-gray-500">{request.companyEmail}</p>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">{request.paymentMethodName || request.paymentMethod}</span>
-                          <span className="text-xs text-gray-500">
+                        
+                        {/* ✅ Colored Badges - Properly Aligned */}
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                          {/* Payment Method Badge */}
+                          <span className="inline-flex items-center gap-1.5 bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-medium">
+                            <CreditCard className="h-3 w-3" />
+                            {request.paymentMethodName || request.paymentMethod}
+                          </span>
+                          
+                          {/* Date Badge */}
+                          <span className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs">
+                            <Calendar className="h-3 w-3" />
                             {request.createdAt?.toLocaleString('en-PK', {
                               year: 'numeric',
                               month: '2-digit',
@@ -251,7 +260,14 @@ export default function AdminPayments() {
                               hour12: true
                             })}
                           </span>
-                          {request.planName && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">{request.planName} Plan</span>}
+                          
+                          {/* Plan Badge */}
+                          {request.planName && (
+                            <span className="inline-flex items-center gap-1.5 bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-medium">
+                              <Star className="h-3 w-3" />
+                              {request.planName} Plan
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -261,7 +277,7 @@ export default function AdminPayments() {
                     <span className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 ${StatusBadge.bg} ${StatusBadge.text}`}>
                       <StatusIcon className="h-4 w-4" /> {StatusBadge.label}
                     </span>
-                    <p className="text-2xl font-bold text-green-600">Rs {request.amount?.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-green-600">PKR {request.amount?.toLocaleString()}</p>
                     <p className="text-sm text-gray-500">{request.creditsToAdd} credits</p>
                   </div>
                 </div>
