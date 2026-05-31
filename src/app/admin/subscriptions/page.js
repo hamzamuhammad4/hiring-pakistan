@@ -10,8 +10,8 @@ import {
 import Link from "next/link";
 import toast from 'react-hot-toast';
 import { 
-  Plus, Edit, Trash2, Eye, CheckCircle, XCircle,
-  Star, TrendingUp, CreditCard, Coins, Zap, AlertTriangle
+  Plus, Edit, Trash2, CheckCircle, XCircle,
+  Star, CreditCard, Coins, Zap, AlertTriangle, RefreshCw
 } from "lucide-react";
 
 export default function AdminSubscriptions() {
@@ -36,15 +36,13 @@ export default function AdminSubscriptions() {
           ...doc.data()
         }));
       } catch (err) {
-        console.log("Subscriptions collection not found:", err.message);
-        // Collection doesn't exist yet - that's fine, just show empty state
         plansList = [];
       }
       
       setPlans(plansList);
       
     } catch (err) {
-      console.error("Error fetching subscriptions:", err);
+      console.error(err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -63,7 +61,6 @@ export default function AdminSubscriptions() {
       ));
       toast.success(`Plan ${newStatus === 'active' ? 'activated' : 'deactivated'}`);
     } catch (error) {
-      console.error("Error updating status:", error);
       toast.error("Failed to update status");
     }
   };
@@ -75,7 +72,6 @@ export default function AdminSubscriptions() {
       setPlans(plans.filter(p => p.id !== planId));
       toast.success("Plan deleted successfully");
     } catch (error) {
-      console.error("Error deleting plan:", error);
       toast.error("Failed to delete plan");
     }
   };
@@ -91,7 +87,6 @@ export default function AdminSubscriptions() {
     );
   }
 
-  // Show error but with option to retry and default message
   if (error) {
     return (
       <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
@@ -104,16 +99,12 @@ export default function AdminSubscriptions() {
         >
           Retry
         </button>
-        <p className="text-xs text-gray-400 mt-4">
-          Tip: Click "Add New Plan" to create your first subscription plan.
-        </p>
       </div>
     );
   }
 
   return (
     <div>
-      {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">📋 Subscription Plans</h1>
@@ -127,7 +118,6 @@ export default function AdminSubscriptions() {
         </Link>
       </div>
 
-      {/* Plans Grid */}
       {plans.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-lg p-16 text-center">
           <CreditCard className="h-16 w-16 text-gray-300 mx-auto mb-4" />
@@ -160,7 +150,7 @@ export default function AdminSubscriptions() {
                   <div>
                     <h3 className="text-2xl font-bold text-gray-800">{plan.name}</h3>
                     <p className="text-3xl font-bold text-cyan-600 mt-2">
-                      Rs {plan.price?.toLocaleString() || 0}
+                      PKR {plan.price?.toLocaleString() || 0}
                     </p>
                     <p className="text-sm text-gray-500">{plan.credits} credits</p>
                   </div>
