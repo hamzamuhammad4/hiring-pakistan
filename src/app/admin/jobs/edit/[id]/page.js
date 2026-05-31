@@ -7,22 +7,31 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import Link from "next/link";
 import toast from 'react-hot-toast';
-import { Briefcase, Building2, MapPin, DollarSign, ArrowLeft, Save } from "lucide-react";
+import { Briefcase, Building2, MapPin, DollarSign, ArrowLeft, Save, AlertCircle, Clock, GraduationCap, Users } from "lucide-react";
 
 export default function AdminEditJobPage() {
   const router = useRouter();
   const { id } = useParams();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
     title: "",
     companyName: "",
     location: "",
     type: "Full Time",
-    salary: "",
+    salaryMin: "",
+    salaryMax: "",
+    salaryType: "monthly",
     description: "",
     requirements: "",
+    benefits: "",
     contact: "",
+    experienceMin: "",
+    experienceMax: "",
+    qualification: "",
+    shift: "Morning",
+    vacancies: "",
     status: "pending"
   });
 
@@ -34,15 +43,51 @@ export default function AdminEditJobPage() {
         
         if (jobSnap.exists()) {
           const jobData = jobSnap.data();
+          
+          // Parse salary to extract min, max, type
+          let salaryMin = "";
+          let salaryMax = "";
+          let salaryType = "monthly";
+          let experienceMin = "";
+          let experienceMax = "";
+          
+          // Extract experience from string like "2-5 years" or "3+ years"
+          if (jobData.experience && jobData.experience !== "Not specified") {
+            const expMatch = jobData.experience.match(/(\d+)(?:\s*-\s*(\d+))?\s*years?/);
+            if (expMatch) {
+              if (expMatch[2]) {
+                experienceMin = expMatch[1];
+                experienceMax = expMatch[2];
+              } else if (expMatch[1]) {
+                experienceMin = expMatch[1];
+              }
+            }
+          }
+          
+          // Use stored min/max if available
+          if (jobData.experienceMin) experienceMin = jobData.experienceMin;
+          if (jobData.experienceMax) experienceMax = jobData.experienceMax;
+          if (jobData.salaryMin) salaryMin = jobData.salaryMin;
+          if (jobData.salaryMax) salaryMax = jobData.salaryMax;
+          if (jobData.salaryType) salaryType = jobData.salaryType;
+          
           setFormData({
             title: jobData.title || "",
             companyName: jobData.companyName || "",
             location: jobData.location || "",
             type: jobData.type || "Full Time",
-            salary: jobData.salary || "",
+            salaryMin: salaryMin,
+            salaryMax: salaryMax,
+            salaryType: salaryType,
             description: jobData.description || "",
             requirements: jobData.requirements || "",
+            benefits: jobData.benefits || "",
             contact: jobData.contact || "",
+            experienceMin: experienceMin,
+            experienceMax: experienceMax,
+            qualification: jobData.qualification || "",
+            shift: jobData.shift || "Morning",
+            vacancies: jobData.vacancies || "",
             status: jobData.status || "pending"
           });
         } else {
@@ -61,17 +106,91 @@ export default function AdminEditJobPage() {
   }, [id, router]);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    let newValue = value;
+    
+    // Number validation for numeric fields
+    if (['salaryMin', 'salaryMax', 'experienceMin', 'experienceMax', 'vacancies'].includes(name)) {
+      if (value && isNaN(value)) {
+        setErrors(prev => ({ ...prev, [name]: "Only numbers allowed" }));
+        return;
+      } else {
+        setErrors(prev => ({ ...prev, [name]: "" }));
+        newValue = value === "" ? "" : Number(value);
+      }
+    } else {
+      setErrors(prev => ({ ...prev, [name]: "" }));
+    }
+    
+    setFormData(prev => ({ ...prev, [name]: newValue }));
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!formData.title.trim()) newErrors.title = "Job title is required";
+    if (!formData.companyName.trim()) newErrors.companyName = "Company name is required";
+    if (!formData.location.trim()) newErrors.location = "Location is required";
+    if (!formData.type) newErrors.type = "Job type is required";
+    if (!formData.description.trim()) newErrors.description = "Job description is required";
+    if (!formData.requirements.trim()) newErrors.requirements = "Requirements are required";
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      toast.error("Please fix the errors in the form");
+      return;
+    }
+
     setSaving(true);
     
     try {
+      // Format salary
+      let salaryDisplay = "Negotiable";
+      if (formData.salaryMin && formData.salaryMax) {
+        salaryDisplay = `${formData.salaryMin.toLocaleString()} - ${formData.salaryMax.toLocaleString()} / ${formData.salaryType}`;
+      } else if (formData.salaryMin) {
+        salaryDisplay = `From ${formData.salaryMin.toLocaleString()} / ${formData.salaryType}`;
+      } else if (formData.salaryMax) {
+        salaryDisplay = `Up to ${formData.salaryMax.toLocaleString()} / ${formData.salaryType}`;
+      }
+
+      // Format experience
+      let experienceDisplay = "Not specified";
+      if (formData.experienceMin && formData.experienceMax) {
+        experienceDisplay = `${formData.experienceMin} - ${formData.experienceMax} years`;
+      } else if (formData.experienceMin) {
+        experienceDisplay = `${formData.experienceMin}+ years`;
+      } else if (formData.experienceMax) {
+        experienceDisplay = `Up to ${formData.experienceMax} years`;
+      }
+
       const jobRef = doc(db, "jobs", id);
       await updateDoc(jobRef, {
-        ...formData,
+        title: formData.title.trim(),
+        companyName: formData.companyName.trim(),
+        location: formData.location.trim(),
+        type: formData.type,
+        salary: salaryDisplay,
+        salaryMin: formData.salaryMin || null,
+        salaryMax: formData.salaryMax || null,
+        salaryType: formData.salaryType,
+        description: formData.description.trim(),
+        requirements: formData.requirements.trim(),
+        benefits: formData.benefits.trim() || null,
+        contact: formData.contact || null,
+        experience: experienceDisplay,
+        experienceMin: formData.experienceMin || null,
+        experienceMax: formData.experienceMax || null,
+        qualification: formData.qualification || null,
+        shift: formData.shift,
+        vacancies: formData.vacancies || null,
+        status: formData.status,
         updatedAt: serverTimestamp(),
       });
 
@@ -87,6 +206,8 @@ export default function AdminEditJobPage() {
   };
 
   const jobTypes = ["Full Time", "Part Time", "Contract", "Internship", "Remote"];
+  const salaryTypes = ["hourly", "daily", "weekly", "monthly", "yearly"];
+  const shifts = ["Morning", "Evening", "Night", "Rotational", "Flexible"];
   const statusOptions = ["pending", "active", "rejected"];
 
   if (loading) {
@@ -107,74 +228,193 @@ export default function AdminEditJobPage() {
         <p className="text-gray-500 mt-1">Update job details</p>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-lg p-8 max-w-3xl">
+      <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Basic Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Job Title *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Job Title <span className="text-red-500">*</span>
+              </label>
               <input
                 type="text"
                 name="title"
                 value={formData.title}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-500"
-                required
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-500 ${errors.title ? 'border-red-500' : 'border-gray-300'}`}
               />
+              {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Company Name *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Company Name <span className="text-red-500">*</span>
+              </label>
               <input
                 type="text"
                 name="companyName"
                 value={formData.companyName}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-lg"
-                required
+                className={`w-full px-4 py-2 border rounded-lg ${errors.companyName ? 'border-red-500' : 'border-gray-300'}`}
               />
+              {errors.companyName && <p className="text-red-500 text-xs mt-1">{errors.companyName}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Location <span className="text-red-500">*</span>
+              </label>
               <input
                 type="text"
                 name="location"
                 value={formData.location}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-lg"
+                className={`w-full px-4 py-2 border rounded-lg ${errors.location ? 'border-red-500' : 'border-gray-300'}`}
               />
+              {errors.location && <p className="text-red-500 text-xs mt-1">{errors.location}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Job Type</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Job Type <span className="text-red-500">*</span>
+              </label>
               <select
                 name="type"
                 value={formData.type}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-lg"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
               >
                 {jobTypes.map(type => <option key={type} value={type}>{type}</option>)}
               </select>
             </div>
+          </div>
 
+          {/* Salary Range */}
+          <div className="border-t pt-4">
+            <h3 className="text-md font-semibold text-gray-800 mb-3 flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-cyan-600" /> Salary Range
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Minimum Salary</label>
+                <input
+                  type="text"
+                  name="salaryMin"
+                  value={formData.salaryMin}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  placeholder="e.g., 50000"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Maximum Salary</label>
+                <input
+                  type="text"
+                  name="salaryMax"
+                  value={formData.salaryMax}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  placeholder="e.g., 80000"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Per</label>
+                <select
+                  name="salaryType"
+                  value={formData.salaryType}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                >
+                  {salaryTypes.map(type => <option key={type} value={type}>{type}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Experience */}
+          <div className="border-t pt-4">
+            <h3 className="text-md font-semibold text-gray-800 mb-3 flex items-center gap-2">
+              <Clock className="h-4 w-4 text-cyan-600" /> Experience Required
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Minimum Years</label>
+                <input
+                  type="text"
+                  name="experienceMin"
+                  value={formData.experienceMin}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  placeholder="e.g., 2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Maximum Years</label>
+                <input
+                  type="text"
+                  name="experienceMax"
+                  value={formData.experienceMax}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  placeholder="e.g., 5"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Details */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Salary Range</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Qualification</label>
               <input
                 type="text"
-                name="salary"
-                value={formData.salary}
+                name="qualification"
+                value={formData.qualification}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-lg"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                placeholder="e.g., Bachelor's in Computer Science"
               />
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Shift</label>
+              <select
+                name="shift"
+                value={formData.shift}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              >
+                {shifts.map(shift => <option key={shift} value={shift}>{shift}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Vacancies</label>
+              <input
+                type="text"
+                name="vacancies"
+                value={formData.vacancies}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                placeholder="e.g., 5"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Contact Number</label>
+              <input
+                type="tel"
+                name="contact"
+                value={formData.contact}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                placeholder="03XXXXXXXXX"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
               <select
                 name="status"
                 value={formData.status}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-lg"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
               >
                 {statusOptions.map(status => (
                   <option key={status} value={status}>
@@ -185,30 +425,57 @@ export default function AdminEditJobPage() {
             </div>
           </div>
 
+          {/* Job Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Job Description *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Job Description <span className="text-red-500">*</span>
+            </label>
             <textarea
               name="description"
               value={formData.description}
               onChange={handleChange}
-              rows="6"
-              className="w-full px-4 py-2 border rounded-lg"
-              required
+              rows="5"
+              className={`w-full px-4 py-2 border rounded-lg ${errors.description ? 'border-red-500' : 'border-gray-300'}`}
             />
+            {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
           </div>
 
+          {/* Requirements */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Requirements</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Requirements <span className="text-red-500">*</span>
+            </label>
             <textarea
               name="requirements"
               value={formData.requirements}
               onChange={handleChange}
               rows="4"
-              className="w-full px-4 py-2 border rounded-lg"
+              className={`w-full px-4 py-2 border rounded-lg ${errors.requirements ? 'border-red-500' : 'border-gray-300'}`}
+            />
+            {errors.requirements && <p className="text-red-500 text-xs mt-1">{errors.requirements}</p>}
+          </div>
+
+          {/* Benefits */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Benefits</label>
+            <textarea
+              name="benefits"
+              value={formData.benefits}
+              onChange={handleChange}
+              rows="3"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              placeholder="Health insurance, paid time off, etc."
             />
           </div>
 
-          <div className="flex gap-4">
+          <div className="bg-yellow-50 p-3 rounded-lg flex items-start gap-2">
+            <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" />
+            <p className="text-xs text-yellow-700">
+              After editing, changes will be reflected on the website immediately (if status is active).
+            </p>
+          </div>
+
+          <div className="flex gap-3 pt-2">
             <button
               type="submit"
               disabled={saving}
@@ -216,7 +483,7 @@ export default function AdminEditJobPage() {
             >
               <Save className="h-4 w-4" /> {saving ? "Saving..." : "Save Changes"}
             </button>
-            <Link href="/admin/jobs" className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg">
+            <Link href="/admin/jobs" className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300">
               Cancel
             </Link>
           </div>
