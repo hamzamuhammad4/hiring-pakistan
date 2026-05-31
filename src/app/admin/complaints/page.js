@@ -1,7 +1,7 @@
 // src/app/admin/complaints/page.js
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { 
   collection, getDocs, doc, updateDoc, deleteDoc,
@@ -23,11 +23,23 @@ export default function AdminComplaints() {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [response, setResponse] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [stats, setStats] = useState({ total: 0, pending: 0, resolved: 0 });
+  
+  const textareaRef = useRef(null);
 
   useEffect(() => {
     fetchComplaints();
   }, []);
+
+  // Focus textarea when modal opens
+  useEffect(() => {
+    if (showModal && textareaRef.current) {
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 100);
+    }
+  }, [showModal]);
 
   const fetchComplaints = async () => {
     try {
@@ -70,6 +82,8 @@ export default function AdminComplaints() {
       return;
     }
     
+    setSubmitting(true);
+    
     try {
       await updateDoc(doc(db, "complaints", complaintId), {
         status: 'resolved',
@@ -88,12 +102,16 @@ export default function AdminComplaints() {
         resolved: prev.resolved + 1
       }));
       
-      toast.success("Complaint resolved");
+      toast.success("Complaint resolved successfully!");
       setShowModal(false);
       setResponse("");
+      setSelectedComplaint(null);
+      
     } catch (err) {
       console.error("Error resolving complaint:", err);
-      toast.error("Failed to resolve");
+      toast.error("Failed to resolve complaint");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -103,16 +121,23 @@ export default function AdminComplaints() {
     try {
       await deleteDoc(doc(db, "complaints", complaintId));
       setComplaints(complaints.filter(c => c.id !== complaintId));
-      setStats(prev => ({
-        ...prev,
-        total: prev.total - 1,
-        pending: complaints.find(c => c.id === complaintId)?.status === 'pending' ? prev.pending - 1 : prev.pending,
-        resolved: complaints.find(c => c.id === complaintId)?.status === 'resolved' ? prev.resolved - 1 : prev.resolved
-      }));
       toast.success("Complaint deleted");
+      fetchComplaints();
     } catch (err) {
       toast.error("Failed to delete");
     }
+  };
+
+  const openModal = (complaint) => {
+    setSelectedComplaint(complaint);
+    setResponse(complaint.adminResponse || "");
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedComplaint(null);
+    setResponse("");
   };
 
   const filteredComplaints = complaints.filter(c => {
@@ -151,7 +176,7 @@ export default function AdminComplaints() {
         <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
           <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
             <h2 className="text-xl font-bold">Complaint Details</h2>
-            <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-gray-700">✕</button>
+            <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">✕</button>
           </div>
           <div className="p-6 space-y-4">
             <div>
@@ -177,7 +202,7 @@ export default function AdminComplaints() {
             
             {selectedComplaint.adminResponse && (
               <div className="bg-green-50 p-4 rounded-lg">
-                <p className="font-medium text-green-800 mb-2">Admin Response:</p>
+                <p className="font-medium text-green-800 mb-2">Previous Response:</p>
                 <p className="text-green-700">{selectedComplaint.adminResponse}</p>
               </div>
             )}
@@ -186,18 +211,34 @@ export default function AdminComplaints() {
               <div>
                 <label className="block font-medium mb-2">Your Response</label>
                 <textarea
+                  ref={textareaRef}
                   value={response}
                   onChange={(e) => setResponse(e.target.value)}
                   rows="4"
-                  className="w-full border rounded-lg p-3"
+                  className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-cyan-500 focus:outline-none"
                   placeholder="Write your response here..."
+                  disabled={submitting}
                 />
-                <button
-                  onClick={() => handleResolve(selectedComplaint.id, response)}
-                  className="mt-3 bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-                >
-                  <CheckCircle className="h-4 w-4" /> Mark as Resolved
-                </button>
+                <div className="flex gap-3 mt-4">
+                  <button
+                    onClick={() => handleResolve(selectedComplaint.id, response)}
+                    disabled={submitting}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 disabled:bg-gray-400"
+                  >
+                    {submitting ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    ) : (
+                      <CheckCircle className="h-4 w-4" />
+                    )}
+                    {submitting ? "Resolving..." : "Mark as Resolved"}
+                  </button>
+                  <button
+                    onClick={closeModal}
+                    className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -312,11 +353,7 @@ export default function AdminComplaints() {
                 
                 <div className="flex gap-2">
                   <button
-                    onClick={() => {
-                      setSelectedComplaint(complaint);
-                      setResponse(complaint.adminResponse || "");
-                      setShowModal(true);
-                    }}
+                    onClick={() => openModal(complaint)}
                     className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-1"
                   >
                     <Eye className="h-4 w-4" /> View
