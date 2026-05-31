@@ -15,15 +15,15 @@ export default function JobCard({ job }) {
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition duration-300">
       <div className="p-4">
-        {/* Header with Logo */}
+        {/* Header with Logo - No Blue Background */}
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 bg-gradient-to-r from-cyan-600 to-blue-700 rounded-xl flex items-center justify-center shadow-md overflow-hidden">
+          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm overflow-hidden border border-gray-100">
             <Image 
               src="/logo.png" 
               alt="Hiring Pakistan" 
               width={32} 
               height={32} 
-              className="object-contain p-1 bg-white rounded-lg"
+              className="object-contain"
             />
           </div>
           <div className="flex-1 min-w-0">
@@ -39,17 +39,17 @@ export default function JobCard({ job }) {
         {/* Location, Type, Salary Badges */}
         <div className="flex flex-wrap gap-1.5 mb-3">
           {job.location && (
-            <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-lg text-xs flex items-center gap-1">
+            <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded-lg text-xs flex items-center gap-1">
               <MapPin className="h-2.5 w-2.5" /> {job.location}
             </span>
           )}
           {job.type && (
-            <span className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded-lg text-xs flex items-center gap-1">
+            <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded-lg text-xs flex items-center gap-1">
               <Briefcase className="h-2.5 w-2.5" /> {job.type}
             </span>
           )}
           {job.salary && job.salary !== "Negotiable" && (
-            <span className="bg-green-50 text-green-700 px-2 py-0.5 rounded-lg text-xs font-semibold flex items-center gap-1">
+            <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded-lg text-xs font-semibold flex items-center gap-1">
               <DollarSign className="h-2.5 w-2.5" /> {job.salary.length > 30 ? job.salary.substring(0, 25) + "..." : job.salary}
             </span>
           )}
