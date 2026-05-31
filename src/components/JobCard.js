@@ -12,7 +12,7 @@ export default function JobCard({ job }) {
       })
     : "Recent";
 
-  // Function to replace $ with PKR in salary
+  // ✅ Format salary - replace $ with PKR
   const formatSalary = (salary) => {
     if (!salary) return "Negotiable";
     return salary.replace(/\$/g, 'PKR');
