@@ -167,12 +167,7 @@ export default function SingleJobPage() {
               </div>
             )}
 
-            {/* Contact Info - Only if exists */}
-            {job.contact && (
-              <div className="bg-cyan-50 p-3 rounded-lg mb-5">
-                <p className="text-sm text-cyan-800"><strong>📞 Contact for queries:</strong> {job.contact}</p>
-              </div>
-            )}
+            {/* ❌ Contact Info - REMOVED */}
 
             {/* Apply Button */}
             <div className="mt-6 text-center">
