@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import toast from 'react-hot-toast';
 import { 
   Briefcase, Search, CheckCircle, XCircle, 
-  Eye, Trash2, Clock, Building2, MapPin, DollarSign,
+  Eye, Trash2, Clock, Building2, MapPin,
   Filter, ExternalLink, AlertTriangle, RefreshCw, Edit
 } from "lucide-react";
 import Link from "next/link";
@@ -330,8 +330,8 @@ export default function AdminJobs() {
                             <MapPin className="h-4 w-4" />
                             {job.location || 'Karachi'}
                           </span>
+                          {/* DollarSign icon removed from salary display */}
                           <span className="flex items-center gap-1 text-sm text-gray-500">
-                            <DollarSign className="h-4 w-4" />
                             {formatSalary(job.salary)}
                           </span>
                           <span className="flex items-center gap-1 text-sm text-gray-500">
