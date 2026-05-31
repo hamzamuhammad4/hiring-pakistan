@@ -59,7 +59,6 @@ export default function AdminPayments() {
           approvedAt: doc.data().approvedAt?.toDate?.() || null
         }));
       } catch (err) {
-        console.log("Payment requests collection not found:", err.message);
         requestsList = [];
       }
       
@@ -76,27 +75,24 @@ export default function AdminPayments() {
       });
       
     } catch (err) {
-      console.error("Error fetching payment requests:", err);
+      console.error(err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ FIXED: Approve function
   const handleApprove = async (requestId, amount, companyId, creditsToAdd, planName) => {
-    if (!confirm(`✅ Approve payment of Rs ${amount.toLocaleString()}?\n\n${creditsToAdd} credits will be added to company account.`)) return;
+    if (!confirm(`✅ Approve payment of Rs ${amount.toLocaleString()}?\n\n${creditsToAdd} credits will be added.`)) return;
     
     try {
-      // Update payment request status
       await updateDoc(doc(db, "payment_requests", requestId), {
         status: 'approved',
         approvedAt: new Date(),
         approvedBy: 'admin',
-        notes: 'Payment verified successfully'
+        notes: 'Payment verified'
       });
       
-      // Add credits to company
       const companyRef = doc(db, "companies", companyId);
       const updateData = {
         credits: increment(creditsToAdd),
@@ -108,18 +104,16 @@ export default function AdminPayments() {
       }
       await updateDoc(companyRef, updateData);
       
-      toast.success(`✅ Payment approved! ${creditsToAdd} credits added.`);
-      fetchPaymentRequests(); // Refresh the list
+      toast.success(`✅ Approved! ${creditsToAdd} credits added.`);
+      fetchPaymentRequests();
       
     } catch (err) {
-      console.error("Error approving payment:", err);
-      toast.error("Failed to approve payment: " + err.message);
+      toast.error("Failed to approve");
     }
   };
 
-  // ✅ FIXED: Reject function
   const handleReject = async (requestId) => {
-    const reason = prompt("Please enter reason for rejection:");
+    const reason = prompt("Reason for rejection:");
     if (!reason) return;
     
     try {
@@ -130,12 +124,11 @@ export default function AdminPayments() {
         rejectionReason: reason
       });
       
-      toast.success("❌ Payment request rejected");
-      fetchPaymentRequests(); // Refresh the list
+      toast.success("❌ Rejected");
+      fetchPaymentRequests();
       
     } catch (err) {
-      console.error("Error rejecting payment:", err);
-      toast.error("Failed to reject payment");
+      toast.error("Failed to reject");
     }
   };
 
@@ -174,10 +167,7 @@ export default function AdminPayments() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading payment requests...</p>
-        </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
       </div>
     );
   }
@@ -186,10 +176,9 @@ export default function AdminPayments() {
     <div>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800">💰 Payment Requests</h1>
-        <p className="text-gray-500 mt-1">Verify and approve manual payment requests from companies</p>
+        <p className="text-gray-500 mt-1">Verify and approve manual payment requests</p>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="bg-green-50 rounded-2xl p-6">
           <div className="flex items-center gap-4">
@@ -217,7 +206,6 @@ export default function AdminPayments() {
         </div>
       </div>
 
-      {/* Filters */}
       <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
         <div className="flex gap-2">
           {['all', 'pending', 'approved', 'rejected'].map((f) => (
@@ -231,7 +219,6 @@ export default function AdminPayments() {
         </div>
       </div>
 
-      {/* Payment Requests List */}
       {paymentRequests.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-lg p-16 text-center">
           <CreditCard className="h-16 w-16 text-gray-300 mx-auto mb-4" />
@@ -254,7 +241,16 @@ export default function AdminPayments() {
                         <p className="text-sm text-gray-500">{request.companyEmail}</p>
                         <div className="flex flex-wrap gap-2 mt-2">
                           <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">{request.paymentMethodName || request.paymentMethod}</span>
-                          <span className="text-xs text-gray-500">{request.createdAt?.toLocaleString()}</span>
+                          <span className="text-xs text-gray-500">
+                            {request.createdAt?.toLocaleString('en-PK', {
+                              year: 'numeric',
+                              month: '2-digit',
+                              day: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true
+                            })}
+                          </span>
                           {request.planName && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">{request.planName} Plan</span>}
                         </div>
                       </div>
@@ -270,16 +266,14 @@ export default function AdminPayments() {
                   </div>
                 </div>
 
-                {/* Screenshot Button */}
                 {request.screenshotUrl && (
                   <div className="mt-4">
                     <button onClick={() => window.open(request.screenshotUrl, '_blank')} className="bg-cyan-50 text-cyan-700 px-4 py-2 rounded-lg text-sm flex items-center gap-2 hover:bg-cyan-100">
-                      <Upload className="h-4 w-4" /> View Payment Screenshot
+                      <Upload className="h-4 w-4" /> View Screenshot
                     </button>
                   </div>
                 )}
 
-                {/* ✅ Action Buttons - Fixed */}
                 {request.status === 'pending' && (
                   <div className="mt-4 flex gap-3 pt-4 border-t">
                     <button onClick={() => handleApprove(request.id, request.amount, request.companyId, request.creditsToAdd, request.planName)} className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg text-sm flex items-center gap-2">
@@ -293,7 +287,7 @@ export default function AdminPayments() {
 
                 {request.rejectionReason && (
                   <div className="mt-3 bg-red-50 p-3 rounded-lg">
-                    <p className="text-sm text-red-700"><strong>Rejection Reason:</strong> {request.rejectionReason}</p>
+                    <p className="text-sm text-red-700"><strong>Rejection:</strong> {request.rejectionReason}</p>
                   </div>
                 )}
               </div>
