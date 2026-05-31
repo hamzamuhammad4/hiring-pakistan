@@ -1,4 +1,3 @@
-// src/app/admin/companies/page.js
 "use client";
 
 import { useState, useEffect } from "react";
@@ -278,7 +277,7 @@ export default function AdminCompanies() {
                         </button>
                       </div>
                     </td>
-                  <tr>
+                  </tr>
                 ))}
               </tbody>
             </table>
