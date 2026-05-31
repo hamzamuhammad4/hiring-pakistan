@@ -342,7 +342,7 @@ export default function AdminJobs() {
                       </div>
                     )}
 
-                    {/* ✅ ALL BUTTONS SAME SIZE */}
+                    {/* ✅ ALL BUTTONS SAME SIZE - WITH ADMIN PREVIEW LINK */}
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => handleEdit(job.id)}
@@ -351,7 +351,7 @@ export default function AdminJobs() {
                         <Edit className="h-3.5 w-3.5" /> Edit
                       </button>
                       <Link
-                        href={`/jobs/${job.id}`}
+                        href={`/admin/jobs/preview/${job.id}`}
                         target="_blank"
                         className="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1 transition"
                       >
