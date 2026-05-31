@@ -56,6 +56,7 @@ export default function CompanyLogin() {
       const actionCodeSettings = {
         url: `${window.location.origin}/reset-password`,
         handleCodeInApp: true,
+        dynamicLinkDomain: 'hiringpakistan.co',
       };
       await sendPasswordResetEmail(auth, resetEmail, actionCodeSettings);
       toast.success("Password reset email sent! Check your inbox.");
