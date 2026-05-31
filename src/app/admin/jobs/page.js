@@ -152,6 +152,30 @@ export default function AdminJobs() {
     router.push(`/admin/jobs/edit/${jobId}`);
   };
 
+  // Helper function to format salary with PKR currency
+  const formatSalary = (salary) => {
+    if (!salary) return "Negotiable";
+    
+    // If salary is already a string with PKR, return as is
+    if (typeof salary === 'string' && salary.includes('PKR')) {
+      return salary;
+    }
+    
+    // Handle numeric salary
+    if (typeof salary === 'number') {
+      return `PKR ${salary.toLocaleString()}`;
+    }
+    
+    // Handle string salary without currency
+    let salaryStr = String(salary);
+    
+    // Remove any existing currency symbols ($, £, €, etc.)
+    salaryStr = salaryStr.replace(/[$£€]/g, '');
+    
+    // Add PKR prefix
+    return `PKR ${salaryStr.trim()}`;
+  };
+
   const filteredJobs = jobs.filter(job => {
     if (filter === 'pending' && job.status !== 'pending') return false;
     if (filter === 'approved' && job.status !== 'active' && job.status !== 'approved') return false;
@@ -308,7 +332,7 @@ export default function AdminJobs() {
                           </span>
                           <span className="flex items-center gap-1 text-sm text-gray-500">
                             <DollarSign className="h-4 w-4" />
-                            {job.salary || 'Negotiable'}
+                            {formatSalary(job.salary)}
                           </span>
                           <span className="flex items-center gap-1 text-sm text-gray-500">
                             <Clock className="h-4 w-4" />
@@ -342,7 +366,7 @@ export default function AdminJobs() {
                       </div>
                     )}
 
-                    {/* ✅ ALL BUTTONS SAME SIZE - WITH ADMIN PREVIEW LINK */}
+                    {/* ALL BUTTONS SAME SIZE - WITH ADMIN PREVIEW LINK */}
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => handleEdit(job.id)}
