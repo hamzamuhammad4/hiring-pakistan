@@ -34,7 +34,7 @@ export default function JobCard({ job }) {
           </span>
         </div>
         <div className="flex justify-between text-sm text-gray-500 mb-3">
-          <span className="flex items-center gap-1"><Eye className="h-4 w-4" /> {job.views || 0} views</span>
+          
           <span className="flex items-center gap-1"><Users className="h-4 w-4" /> {job.applicantsCount || 0} applicants</span>
         </div>
         <p className="text-gray-600 text-sm line-clamp-2 mb-3">

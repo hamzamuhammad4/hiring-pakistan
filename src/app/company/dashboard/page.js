@@ -539,7 +539,7 @@ export default function CompanyDashboard() {
                       </span>
                     </div>
                     <div className="flex justify-between text-sm text-gray-500 mb-4">
-                      <span className="flex items-center gap-1"><Eye className="h-4 w-4" /> {job.views || 0} views</span>
+                      
                       <span className="flex items-center gap-1"><Users className="h-4 w-4" /> {job.applicantsCount || 0} applicants</span>
                     </div>
                     <p className="text-gray-600 mb-5 line-clamp-2 text-sm">{job.description?.substring(0, 120) || "No description"}...</p>
