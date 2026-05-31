@@ -65,6 +65,12 @@ export default function CompanyDashboard() {
 
   const prevAppCountRef = useRef(0);
 
+  // ✅ Format salary - replace $ with PKR
+  const formatSalary = (salary) => {
+    if (!salary) return "Negotiable";
+    return salary.replace(/\$/g, 'PKR');
+  };
+
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
       if (!user) {
@@ -415,7 +421,7 @@ export default function CompanyDashboard() {
                       )}
                       {job.salary && (
                         <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 text-xs px-3 py-1.5 rounded-lg font-medium">
-                          <DollarSign className="h-3 w-3" /> {job.salary}
+                          <DollarSign className="h-3 w-3" /> {formatSalary(job.salary)}
                         </span>
                       )}
                     </div>
@@ -462,37 +468,6 @@ export default function CompanyDashboard() {
           </Link>
         </div>
 
-        {/* Recent Applications */}
-        {/* <div className="bg-white rounded-2xl shadow-lg p-6 mb-12">
-          <div className="flex items-center gap-2 mb-6">
-            <Users className="h-6 w-6 text-cyan-600" />
-            <h2 className="text-2xl font-bold text-gray-800">Recent Applications</h2>
-          </div>
-          {recentApps.length === 0 ? (
-            <div className="text-center py-8">
-              <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">No applications yet</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {recentApps.map(app => (
-                <div key={app.id} className="flex justify-between items-center border-b pb-3 hover:bg-gray-50 p-3 rounded-lg transition">
-                  <div>
-                    <p className="font-semibold text-gray-800 flex items-center gap-2">{app.name}</p>
-                    <p className="text-sm text-gray-500">for {app.jobTitle}</p>
-                    <span className={`text-xs px-2 py-1 rounded-full inline-block mt-1 ${app.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : app.status === 'reviewed' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
-                      {app.status}
-                    </span>
-                  </div>
-                  <Link href={`/company/applicants/${app.id}`} className="bg-blue-100 text-blue-600 px-3 py-2 rounded-lg text-sm hover:bg-blue-200 transition">
-                    View <ChevronRight className="h-4 w-4 inline" />
-                  </Link>
-                </div>
-              ))}
-            </div>
-          )}
-        </div> */}
-
         {/* Active Jobs */}
         <div>
           <div className="flex justify-between items-center mb-6">
@@ -535,11 +510,10 @@ export default function CompanyDashboard() {
                       </span>
                       <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs">{job.type || "Full Time"}</span>
                       <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                        <DollarSign className="h-3 w-3" /> {job.salary || "Negotiable"}
+                        <DollarSign className="h-3 w-3" /> {formatSalary(job.salary) || "Negotiable"}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm text-gray-500 mb-4">
-                      
                       <span className="flex items-center gap-1"><Users className="h-4 w-4" /> {job.applicantsCount || 0} applicants</span>
                     </div>
                     <p className="text-gray-600 mb-5 line-clamp-2 text-sm">{job.description?.substring(0, 120) || "No description"}...</p>

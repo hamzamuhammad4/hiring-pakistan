@@ -12,10 +12,16 @@ export default function JobCard({ job }) {
       })
     : "Recent";
 
+  // Function to replace $ with PKR in salary
+  const formatSalary = (salary) => {
+    if (!salary) return "Negotiable";
+    return salary.replace(/\$/g, 'PKR');
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition duration-300">
       <div className="p-4">
-        {/* Header with Logo - No Blue Background */}
+        {/* Header with Logo */}
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm overflow-hidden border border-gray-100">
             <Image 
@@ -50,7 +56,7 @@ export default function JobCard({ job }) {
           )}
           {job.salary && job.salary !== "Negotiable" && (
             <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded-lg text-xs font-semibold flex items-center gap-1">
-              <DollarSign className="h-2.5 w-2.5" /> {job.salary.length > 30 ? job.salary.substring(0, 25) + "..." : job.salary}
+              <DollarSign className="h-2.5 w-2.5" /> {formatSalary(job.salary.length > 30 ? job.salary.substring(0, 25) + "..." : job.salary)}
             </span>
           )}
         </div>

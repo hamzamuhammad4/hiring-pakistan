@@ -57,6 +57,12 @@ export default function SingleJobPage() {
     fetchJob();
   }, [id]);
 
+  // ✅ Format salary - replace $ with PKR
+  const formatSalary = (salary) => {
+    if (!salary) return "Negotiable";
+    return salary.replace(/\$/g, 'PKR');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -110,7 +116,7 @@ export default function SingleJobPage() {
             <div className="grid grid-cols-2 gap-3 mb-6">
               <div className="bg-gray-50 p-3 rounded-lg"><p className="text-gray-500 text-xs mb-1">📍 Location</p><p className="font-medium text-sm">{job.location || "Pakistan"}</p></div>
               <div className="bg-gray-50 p-3 rounded-lg"><p className="text-gray-500 text-xs mb-1">💼 Job Type</p><p className="font-medium text-sm">{job.type || "Full Time"}</p></div>
-              <div className="bg-gray-50 p-3 rounded-lg"><p className="text-gray-500 text-xs mb-1">💰 Salary</p><p className="font-medium text-green-600 text-sm">{job.salary || "Negotiable"}</p></div>
+              <div className="bg-gray-50 p-3 rounded-lg"><p className="text-gray-500 text-xs mb-1">💰 Salary</p><p className="font-medium text-green-600 text-sm">{formatSalary(job.salary) || "Negotiable"}</p></div>
               <div className="bg-gray-50 p-3 rounded-lg"><p className="text-gray-500 text-xs mb-1">⏳ Experience</p><p className="font-medium text-sm">{job.experience || "Not specified"}</p></div>
               <div className="bg-gray-50 p-3 rounded-lg"><p className="text-gray-500 text-xs mb-1">🎓 Qualification</p><p className="font-medium text-sm">{job.qualification || "Not specified"}</p></div>
               <div className="bg-gray-50 p-3 rounded-lg"><p className="text-gray-500 text-xs mb-1">📅 Posted</p><p className="font-medium text-sm">{postedDate}</p></div>

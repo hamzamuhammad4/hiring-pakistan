@@ -49,6 +49,12 @@ export default function JobsPage() {
     return `${Math.floor(days / 30)} months ago`;
   };
 
+  // ✅ Format salary - replace $ with PKR
+  const formatSalary = (salary) => {
+    if (!salary) return "Negotiable";
+    return salary.replace(/\$/g, 'PKR');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -97,7 +103,7 @@ export default function JobsPage() {
                     </span>
                     <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs">{job.type || "Full Time"}</span>
                     <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                      <DollarSign className="h-3 w-3" /> {job.salary || "Negotiable"}
+                      <DollarSign className="h-3 w-3" /> {formatSalary(job.salary) || "Negotiable"}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm text-gray-500 mb-4">
