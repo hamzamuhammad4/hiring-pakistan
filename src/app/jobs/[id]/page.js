@@ -20,6 +20,7 @@ export default function SingleJobPage() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+     console.log("🔍 Job ID from URL:", id);
     if (!id) return;
 
     const fetchJob = async () => {
