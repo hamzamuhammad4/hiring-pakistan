@@ -2,9 +2,8 @@
 "use client";
 
 import { useState } from "react";
-import { db, storage } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import toast from 'react-hot-toast';
@@ -33,7 +32,6 @@ export default function AddBlog() {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Check file size (max 2MB)
       if (file.size > 2 * 1024 * 1024) {
         toast.error("Image too large. Max 2MB");
         return;
@@ -43,7 +41,6 @@ export default function AddBlog() {
     }
   };
 
-  // Handle tag input
   const handleTagKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
@@ -53,7 +50,6 @@ export default function AddBlog() {
 
   const addTag = () => {
     let newTag = tagInput.trim();
-    // Remove trailing comma if present
     if (newTag.endsWith(',')) {
       newTag = newTag.slice(0, -1).trim();
     }
@@ -90,10 +86,24 @@ export default function AddBlog() {
     
     try {
       let imageUrl = "";
+      
+      // ✅ Upload image to VPS storage (not Firebase)
       if (imageFile) {
-        const imageRef = ref(storage, `blogs/${Date.now()}_${imageFile.name}`);
-        await uploadBytes(imageRef, imageFile);
-        imageUrl = await getDownloadURL(imageRef);
+        const imageFormData = new FormData();
+        imageFormData.append('image', imageFile);
+        
+        const uploadRes = await fetch('/api/upload-blog-image', {
+          method: 'POST',
+          body: imageFormData,
+        });
+        
+        const uploadData = await uploadRes.json();
+        
+        if (!uploadData.success) {
+          throw new Error(uploadData.error);
+        }
+        
+        imageUrl = uploadData.url;
       }
 
       const blogData = {
@@ -199,7 +209,7 @@ export default function AddBlog() {
 
         {/* Tags Input with Chips */}
         <div>
-          <label className="block font-medium mb-2">Tags (comma separated)</label>
+          <label className="block font-medium mb-2">Tags</label>
           <div className="border rounded-lg p-3 focus-within:ring-2 focus-within:ring-cyan-500">
             <div className="flex flex-wrap gap-2 mb-2">
               {tags.map((tag, index) => (
@@ -231,7 +241,7 @@ export default function AddBlog() {
           <p className="text-xs text-gray-400 mt-1">Press Enter or comma (,) to add a tag</p>
         </div>
 
-        {/* Featured Image */}
+        {/* Featured Image - VPS Upload */}
         <div>
           <label className="block font-medium mb-2">Featured Image</label>
           <div className="border-2 border-dashed rounded-lg p-6 text-center">
