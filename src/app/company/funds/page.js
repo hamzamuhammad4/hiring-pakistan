@@ -224,7 +224,7 @@ export default function FundsPage() {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  // ✅ FIXED: File validation - Only JPG, PNG, PDF
+  // ✅ FIXED: File validation - Only JPG, PNG, PDF (Max 1MB)
   const handleScreenshotChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -235,8 +235,9 @@ export default function FundsPage() {
         return;
       }
       
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("File too large. Max 5MB");
+      // ✅ MAX 1MB
+      if (file.size > 1 * 1024 * 1024) {
+        toast.error("File too large. Max 1MB");
         return;
       }
       setScreenshot(file);
@@ -449,7 +450,7 @@ export default function FundsPage() {
                   </div>
                 </div>
 
-                {/* ✅ Screenshot Upload with file type info */}
+                {/* ✅ Screenshot Upload with file type info and 1MB limit text */}
                 <div>
                   <label className="block font-semibold mb-2">Upload Payment Screenshot</label>
                   <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-cyan-500 transition">
@@ -484,7 +485,7 @@ export default function FundsPage() {
                         <div className="bg-gray-100 p-4 rounded-lg">
                           <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                           <p className="text-gray-500">Click to upload screenshot</p>
-                          <p className="text-xs text-gray-400 mt-1">JPG, PNG, PDF only (Max 5MB)</p>
+                          <p className="text-xs text-gray-400 mt-1">JPG, PNG, PDF only (Max 1MB)</p>
                         </div>
                         <input
                           type="file"
