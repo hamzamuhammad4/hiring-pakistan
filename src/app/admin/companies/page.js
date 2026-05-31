@@ -5,13 +5,12 @@ import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { 
   collection, getDocs, doc, updateDoc, deleteDoc,
-  query, orderBy 
+  query, where
 } from "firebase/firestore";
 import toast from 'react-hot-toast';
 import { 
-  Building2, Search, Eye, Ban, CheckCircle, 
-  Trash2, Mail, Phone, Calendar, MoreVertical,
-  ChevronLeft, ChevronRight, AlertTriangle, RefreshCw
+  Building2, Search, Ban, CheckCircle, 
+  Trash2, Mail, Phone, AlertTriangle, RefreshCw
 } from "lucide-react";
 
 export default function AdminCompanies() {
@@ -38,7 +37,6 @@ export default function AdminCompanies() {
           ...doc.data()
         }));
       } catch (err) {
-        console.log("Companies collection not found:", err.message);
         companiesList = [];
       }
       
@@ -51,7 +49,6 @@ export default function AdminCompanies() {
       });
       
     } catch (err) {
-      console.error("Error fetching companies:", err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -71,23 +68,43 @@ export default function AdminCompanies() {
         c.id === companyId ? { ...c, status: newStatus } : c
       ));
       
-      toast.success(`Company ${newStatus === 'active' ? 'activated' : 'blocked'} successfully`);
+      setStats(prev => ({
+        total: prev.total,
+        active: newStatus === 'active' ? prev.active + 1 : prev.active - 1,
+        blocked: newStatus === 'blocked' ? prev.blocked + 1 : prev.blocked - 1
+      }));
+      
+      toast.success(`Company ${newStatus === 'active' ? 'activated' : 'blocked'}`);
     } catch (err) {
-      console.error("Error updating status:", err);
-      toast.error("Failed to update status");
+      toast.error(`Failed to update status: ${err.message}`);
     }
   };
 
   const handleDelete = async (companyId) => {
-    if (!confirm("Are you sure you want to delete this company? This will also delete all their jobs and applications!")) return;
+    if (!confirm("Delete this company? All their jobs and applications will also be deleted.")) return;
     
     try {
+      const jobsQuery = query(collection(db, "jobs"), where("companyId", "==", companyId));
+      const jobsSnap = await getDocs(jobsQuery);
+      
+      for (const jobDoc of jobsSnap.docs) {
+        await deleteDoc(doc(db, "jobs", jobDoc.id));
+      }
+      
       await deleteDoc(doc(db, "companies", companyId));
+      
       setCompanies(companies.filter(c => c.id !== companyId));
+      
+      const deletedCompany = companies.find(c => c.id === companyId);
+      setStats(prev => ({
+        total: prev.total - 1,
+        active: deletedCompany?.status !== 'blocked' ? prev.active - 1 : prev.active,
+        blocked: deletedCompany?.status === 'blocked' ? prev.blocked - 1 : prev.blocked
+      }));
+      
       toast.success("Company deleted successfully");
     } catch (err) {
-      console.error("Error deleting company:", err);
-      toast.error("Failed to delete company");
+      toast.error(`Failed to delete: ${err.message}`);
     }
   };
 
@@ -119,22 +136,17 @@ export default function AdminCompanies() {
         >
           <RefreshCw className="h-4 w-4" /> Retry
         </button>
-        <p className="text-xs text-gray-400 mt-4">
-          Tip: Companies will appear here once they register.
-        </p>
       </div>
     );
   }
 
   return (
     <div>
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800">Companies Management</h1>
         <p className="text-gray-500 mt-1">Manage all registered companies</p>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-blue-50 rounded-2xl p-6">
           <div className="flex items-center gap-4">
@@ -171,7 +183,6 @@ export default function AdminCompanies() {
         </div>
       </div>
 
-      {/* Search Bar */}
       <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -185,7 +196,6 @@ export default function AdminCompanies() {
         </div>
       </div>
 
-      {/* Companies Table */}
       <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
         {companies.length === 0 ? (
           <div className="text-center py-12">
@@ -268,7 +278,7 @@ export default function AdminCompanies() {
                         </button>
                       </div>
                     </td>
-                  </tr>
+                  <tr>
                 ))}
               </tbody>
             </table>
