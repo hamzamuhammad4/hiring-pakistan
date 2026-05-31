@@ -1,140 +1,124 @@
-// src/app/jobs/[id]/page.js
+// src/app/jobs/page.js
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, updateDoc, increment } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import Link from "next/link";
+import { Briefcase, MapPin, DollarSign, Building2, Calendar, Users } from "lucide-react";
 
-export default function SingleJobPage() {
-  const router = useRouter();
-  const params = useParams();
-  const id = params?.id;
-  
-  const [job, setJob] = useState(null);
+export default function JobsPage() {
+  const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [viewsUpdated, setViewsUpdated] = useState(false);
 
-  const fetchJob = useCallback(async () => {
-    if (!id) return;
-    
+  useEffect(() => {
+    fetchJobs();
+  }, []);
+
+  const fetchJobs = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      console.log("Fetching job ID:", id);
+      const jobsQuery = query(collection(db, "jobs"), where("status", "==", "active"));
+      const snapshot = await getDocs(jobsQuery);
       
-      const jobRef = doc(db, "jobs", id);
-      const jobDoc = await getDoc(jobRef);
-
-      if (!jobDoc.exists()) {
-        setError("Job Not Found");
-        return;
-      }
-
-      const jobData = { id: jobDoc.id, ...jobDoc.data() };
-
-      if (jobData.status !== "active") {
-        setError("Job Not Available Yet");
-        return;
-      }
-
-      setJob(jobData);
-
-      // Update views only once
-      if (!viewsUpdated) {
-        await updateDoc(jobRef, {
-          views: increment(1)
-        });
-        setViewsUpdated(true);
-        console.log("Views updated for:", jobData.title);
-      }
-
-    } catch (err) {
-      console.error("Error:", err);
-      setError(err.message);
+      const jobsList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate?.() || new Date()
+      }));
+      
+      jobsList.sort((a, b) => b.createdAt - a.createdAt);
+      setJobs(jobsList);
+      
+    } catch (error) {
+      console.error("Error fetching jobs:", error);
     } finally {
       setLoading(false);
     }
-  }, [id, viewsUpdated]);
+  };
 
-  useEffect(() => {
-    fetchJob();
-  }, [fetchJob]);
+  const getTimeAgo = (date) => {
+    if (!date) return "Recently";
+    const now = new Date();
+    const diff = now - date;
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    if (days === 0) return "Today";
+    if (days === 1) return "Yesterday";
+    if (days < 7) return `${days} days ago`;
+    if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
+    return `${Math.floor(days / 30)} months ago`;
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading job details...</p>
-        </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
       </div>
     );
   }
-
-  if (error || !job) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center p-8 bg-white rounded-2xl shadow-lg">
-          <h1 className="text-3xl font-bold text-red-600 mb-3">{error || "Job Not Found"}</h1>
-          <Link href="/jobs" className="text-cyan-600 hover:underline">
-            ← Browse All Jobs
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  const postedDate = job.createdAt
-    ? new Date(job.createdAt.toDate ? job.createdAt.toDate() : job.createdAt.seconds * 1000).toLocaleDateString()
-    : "Recent";
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto">
-        <Link
-          href="/jobs"
-          className="inline-flex items-center gap-2 text-cyan-600 hover:text-cyan-700 font-medium mb-6 text-lg"
-        >
-          ← Back to Jobs
-        </Link>
+      <div className="max-w-7xl mx-auto">
+        
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">Browse Jobs</h1>
+          <p className="text-gray-500">Find your dream job from top companies in Pakistan</p>
+        </div>
 
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
-          <div className="bg-gradient-to-r from-cyan-600 to-blue-700 text-white p-6 md:p-8">
-            <div className="flex flex-col md:flex-row gap-6 items-start">
-              <div className="w-20 h-20 md:w-24 md:h-24 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center text-5xl font-bold">H</div>
-              <div className="flex-1">
-                <h1 className="text-3xl md:text-4xl font-extrabold mb-2">{job.title}</h1>
-                <p className="text-xl opacity-90 mb-3">Hiring Pakistan</p>
-                <div className="flex flex-wrap gap-3">
-                  <span className="bg-white/30 px-4 py-1.5 rounded-full text-sm">{job.location || "Karachi"}</span>
-                  <span className="bg-white/30 px-4 py-1.5 rounded-full text-sm">{job.type || "Full Time"}</span>
-                  <span className="bg-white/30 px-4 py-1.5 rounded-full text-sm font-bold">{job.salary || "Negotiable"}</span>
+        <div className="mb-6">
+          <p className="text-gray-600">
+            Found <span className="font-semibold text-cyan-600">{jobs.length}</span> jobs
+          </p>
+        </div>
+
+        {jobs.length === 0 ? (
+          <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
+            <Briefcase className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">No jobs found</h3>
+            <p className="text-gray-500">Please check back later for new opportunities.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {jobs.map((job) => (
+              <div key={job.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition">
+                <div className="p-6">
+                  <div className="mb-3">
+                    <h3 className="text-xl font-bold text-gray-800 hover:text-cyan-600">
+                      <Link href={`/jobs/${job.id}`}>{job.title}</Link>
+                    </h3>
+                    <p className="text-gray-600 flex items-center gap-1 mt-1">
+                      <Building2 className="h-4 w-4" /> Hiring Pakistan
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <span className="bg-cyan-100 text-cyan-800 px-3 py-1 rounded-full text-xs flex items-center gap-1">
+                      <MapPin className="h-3 w-3" /> {job.location || "Pakistan"}
+                    </span>
+                    <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs">{job.type || "Full Time"}</span>
+                    <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                      <DollarSign className="h-3 w-3" /> {job.salary || "Negotiable"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm text-gray-500 mb-4">
+                    <span className="flex items-center gap-1">
+                      <Users className="h-4 w-4" /> {job.applicantsCount || 0} applicants
+                    </span>
+                  </div>
+                  <p className="text-gray-600 text-sm line-clamp-2 mb-4">{job.description?.substring(0, 100)}...</p>
+                  <div className="flex justify-between items-center pt-3 border-t">
+                    <span className="text-xs text-gray-400 flex items-center gap-1">
+                      <Calendar className="h-3 w-3" /> {getTimeAgo(job.createdAt)}
+                    </span>
+                    <Link href={`/jobs/${job.id}`} className="bg-cyan-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1">
+                      View Details
+                    </Link>
+                  </div>
                 </div>
               </div>
-            </div>
+            ))}
           </div>
-
-          <div className="p-6 md:p-8">
-            <div className="grid md:grid-cols-3 gap-6 mb-8">
-              <div><p className="text-gray-500 text-sm mb-1">Salary</p><p className="text-2xl font-bold text-green-600">{job.salary || "Negotiable"}</p></div>
-              <div><p className="text-gray-500 text-sm mb-1">Experience</p><p className="text-2xl font-semibold">{job.experience || "Not specified"}</p></div>
-              <div><p className="text-gray-500 text-sm mb-1">Posted</p><p className="text-2xl font-semibold">{postedDate}</p></div>
-            </div>
-
-            <div className="prose max-w-none text-gray-700 leading-relaxed text-base">
-              <h2 className="text-2xl font-bold mb-4">Job Description</h2>
-              <div className="whitespace-pre-wrap">{job.description || "No detailed description available yet."}</div>
-            </div>
-
-            <div className="mt-10 text-center">
-              <Link href={`/apply/${job.id}`} className="inline-block bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold text-xl px-12 py-5 rounded-2xl shadow-xl transform hover:scale-105 transition-all duration-300">
-                Apply Now — It's Free!
-              </Link>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
