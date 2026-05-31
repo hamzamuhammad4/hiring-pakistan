@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { auth, db } from "@/lib/firebase";
 import { 
   doc, getDoc, updateDoc, increment, addDoc, 
-  collection, serverTimestamp 
+  collection, serverTimestamp, getDocs, query, where 
 } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -16,7 +16,7 @@ import {
   Copy
 } from "lucide-react";
 
-// Payment Methods
+// Payment Methods (Bank details - static)
 const PAYMENT_METHODS = [
   { 
     id: 'ubl', 
@@ -56,8 +56,8 @@ const PAYMENT_METHODS = [
   }
 ];
 
-// Plans
-const PLANS = [
+// Default plans (fallback if no subscriptions in Firestore)
+const DEFAULT_PLANS = [
   {
     id: 'basic',
     name: 'Basic',
@@ -84,7 +84,7 @@ const PLANS = [
   }
 ];
 
-const CREDIT_PACKS = [
+const DEFAULT_CREDIT_PACKS = [
   { id: 'small', credits: 10, price: 100, label: 'Small Pack', popular: false },
   { id: 'medium', credits: 25, price: 225, label: 'Medium Pack', popular: true },
   { id: 'large', credits: 50, price: 400, label: 'Large Pack', popular: false },
@@ -104,6 +104,46 @@ export default function FundsPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentStep, setPaymentStep] = useState(1);
   const [copiedField, setCopiedField] = useState(null);
+  
+  // Dynamic state for subscriptions from Firestore
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [creditPacks, setCreditPacks] = useState([]);
+  const [loadingSubs, setLoadingSubs] = useState(true);
+
+  // Fetch subscriptions from Firestore
+  const fetchSubscriptions = async () => {
+    try {
+      // ✅ Fetch ONLY active subscriptions
+      const subsSnap = await getDocs(query(collection(db, "subscriptions"), where("status", "==", "active")));
+      const subsList = subsSnap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      if (subsList.length > 0) {
+        // Separate plans (with name) and credit packs (with type 'pack')
+        const plans = subsList.filter(s => s.type === 'plan' || (s.name && !s.type));
+        const packs = subsList.filter(s => s.type === 'pack' || (s.label && s.credits));
+        
+        setSubscriptions(plans.length > 0 ? plans : DEFAULT_PLANS);
+        setCreditPacks(packs.length > 0 ? packs : DEFAULT_CREDIT_PACKS);
+      } else {
+        // Use default plans if no subscriptions in Firestore
+        setSubscriptions(DEFAULT_PLANS);
+        setCreditPacks(DEFAULT_CREDIT_PACKS);
+      }
+    } catch (error) {
+      console.error("Error fetching subscriptions:", error);
+      setSubscriptions(DEFAULT_PLANS);
+      setCreditPacks(DEFAULT_CREDIT_PACKS);
+    } finally {
+      setLoadingSubs(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSubscriptions();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -280,7 +320,6 @@ export default function FundsPage() {
     }
   };
 
-  // ✅ Payment Modal Component
   const PaymentModal = () => {
     const selectedItem = selectedPlan || selectedPack;
     if (!selectedItem) return null;
@@ -462,7 +501,7 @@ export default function FundsPage() {
     );
   };
 
-  if (loading) {
+  if (loading || loadingSubs) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -494,21 +533,26 @@ export default function FundsPage() {
           </div>
         </div>
 
-        {/* Plans */}
+        {/* Subscription Plans - Dynamically from Firestore */}
         <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
           <Zap className="h-6 w-6 text-cyan-600" />
           Subscription Plans
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          {PLANS.map((plan) => (
-            <div key={plan.id} className={`bg-white rounded-2xl shadow-lg overflow-hidden ${plan.popular ? 'border-2 border-cyan-500 relative' : ''}`}>
+          {subscriptions.map((plan) => (
+            <div 
+              key={plan.id} 
+              className={`bg-white rounded-2xl shadow-lg overflow-hidden transition hover:shadow-xl ${
+                plan.popular ? 'border-2 border-cyan-500 relative' : ''
+              }`}
+            >
               {plan.popular && <div className="bg-cyan-500 text-white text-center py-2 text-sm font-bold">🔥 MOST POPULAR</div>}
               <div className="p-6">
                 <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
-                <p className="text-4xl font-bold text-cyan-600 mb-2">Rs {plan.price.toLocaleString()}</p>
+                <p className="text-4xl font-bold text-cyan-600 mb-2">Rs {plan.price?.toLocaleString() || 0}</p>
                 <p className="text-sm text-gray-500 mb-4">{plan.credits} credits</p>
                 <ul className="space-y-2 mb-6">
-                  {plan.features.map((feature, i) => (
+                  {plan.features?.map((feature, i) => (
                     <li key={i} className="flex items-center gap-2 text-sm text-gray-600">{feature}</li>
                   ))}
                 </ul>
@@ -528,17 +572,17 @@ export default function FundsPage() {
           ))}
         </div>
 
-        {/* Credit Packs */}
+        {/* Credit Packs - Dynamically from Firestore */}
         <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
           <Coins className="h-6 w-6 text-purple-600" />
           Quick Credit Packs
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-          {CREDIT_PACKS.map((pack) => (
+          {creditPacks.map((pack) => (
             <div key={pack.id} className={`bg-white rounded-xl shadow-md p-5 text-center ${pack.popular ? 'border-2 border-purple-500 relative' : ''}`}>
               {pack.popular && <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-purple-500 text-white text-xs px-3 py-1 rounded-full">Best Value</span>}
               <p className="text-2xl font-bold text-purple-600">{pack.credits} Credits</p>
-              <p className="text-gray-500 mb-3">Rs {pack.price.toLocaleString()}</p>
+              <p className="text-gray-500 mb-3">Rs {pack.price?.toLocaleString() || 0}</p>
               <button onClick={() => handlePackSelect(pack)} className="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700">
                 Buy Now
               </button>
