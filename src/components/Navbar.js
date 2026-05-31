@@ -122,83 +122,49 @@ export default function Navbar() {
                     {/* Dropdown Menu */}
                     {dropdownOpen && (
                       <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-50 overflow-hidden">
-                        {/* User Info Header */}
                         <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
                           <p className="text-sm font-semibold text-gray-800">{getDisplayName()}</p>
                           <p className="text-xs text-gray-500 mt-0.5">{user.email}</p>
-                          
-                          {/* Email Verification Warning */}
                           {!isEmailVerified && (
                             <div className="mt-2 bg-yellow-50 border border-yellow-200 rounded-lg p-2">
                               <p className="text-xs text-yellow-800 flex items-center gap-1">
-                                <Mail className="h-3 w-3" />
-                                Email not verified
+                                <Mail className="h-3 w-3" /> Email not verified
                               </p>
-                              <p className="text-xs text-yellow-700 mt-1">
-                                Please check your inbox and verify your email.
-                              </p>
-                              <button 
-                                onClick={async () => {
-                                  await auth.currentUser?.sendEmailVerification();
-                                  toast.success('Verification email sent!');
-                                }}
-                                className="text-xs text-cyan-600 hover:underline mt-1"
-                              >
-                                Resend verification email
-                              </button>
+                              <p className="text-xs text-yellow-700 mt-1">Please check your inbox and verify your email.</p>
+                              <button onClick={async () => { await auth.currentUser?.sendEmailVerification(); toast.success('Verification email sent!'); }} className="text-xs text-cyan-600 hover:underline mt-1">Resend verification email</button>
                             </div>
                           )}
                         </div>
                         
-                        {/* Only show Dashboard if email is verified */}
                         {isEmailVerified && (
                           <>
-                            <Link
-                              href="/company/dashboard"
-                              onClick={() => setDropdownOpen(false)}
-                              className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 transition"
-                            >
-                              <LayoutDashboard className="h-5 w-5" />
-                              <span className="font-medium">Dashboard</span>
+                            <Link href="/company/dashboard" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 transition">
+                              <LayoutDashboard className="h-5 w-5" /><span className="font-medium">Dashboard</span>
                             </Link>
                             <div className="border-t border-gray-100 my-1"></div>
                           </>
                         )}
                         
-                        {/* Show verification message instead of dashboard */}
                         {!isEmailVerified && (
                           <div className="px-4 py-3 bg-gray-50">
-                            <p className="text-xs text-gray-500 text-center">
-                              <Mail className="h-4 w-4 mx-auto mb-1" />
-                              Verify your email to access dashboard
-                            </p>
+                            <p className="text-xs text-gray-500 text-center"><Mail className="h-4 w-4 mx-auto mb-1" /> Verify your email to access dashboard</p>
                           </div>
                         )}
                         
-                        <button
-                          onClick={handleLogout}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 transition"
-                        >
-                          <LogOut className="h-5 w-5" />
-                          <span className="font-medium">Logout</span>
+                        <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 transition">
+                          <LogOut className="h-5 w-5" /><span className="font-medium">Logout</span>
                         </button>
                       </div>
                     )}
                   </div>
                 ) : (
-                  /* Login/Signup Buttons */
+                  /* ✅ LOGIN/SIGNUP BUTTONS - COMPANY ROUTES */
                   <div className="flex items-center gap-3">
-                    <Link
-                      href="/login"
-                      className="text-gray-700 hover:text-cyan-600 font-medium transition"
-                    >
+                    <Link href="/company/login" className="text-gray-700 hover:text-cyan-600 font-medium transition">
                       Login
                     </Link>
-                    <Link
-                      href="/signup"
-                      className="bg-cyan-600 hover:bg-cyan-700 text-white font-medium px-5 py-2 rounded-lg transition"
-                    >
-                      Sign Up
+                    <Link href="/company/signup" className="bg-cyan-600 hover:bg-cyan-700 text-white font-medium px-5 py-2 rounded-lg transition">
+                      Register
                     </Link>
                   </div>
                 )}
@@ -207,10 +173,7 @@ export default function Navbar() {
           </div>
 
           {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden text-gray-600 focus:outline-none"
-          >
+          <button onClick={() => setIsOpen(!isOpen)} className="md:hidden text-gray-600 focus:outline-none">
             {isOpen ? <X size={28} /> : <Menu size={28} />}
           </button>
         </div>
@@ -219,87 +182,24 @@ export default function Navbar() {
         {isOpen && (
           <div className="md:hidden py-4 border-t">
             <div className="flex flex-col gap-3">
-              <Link
-                href="/jobs"
-                onClick={() => setIsOpen(false)}
-                className="text-gray-600 hover:text-cyan-600 px-2 py-2 text-lg"
-              >
-                Browse Jobs
-              </Link>
+              <Link href="/jobs" onClick={() => setIsOpen(false)} className="text-gray-600 hover:text-cyan-600 px-2 py-2 text-lg">Browse Jobs</Link>
 
               {!loading && (
                 <>
                   {user ? (
                     <>
                       <div className="flex items-center gap-3 px-2 py-3 bg-gray-50 rounded-lg">
-                        <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
-                          {getUserInitial()}
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-800">{getDisplayName()}</p>
-                          <p className="text-xs text-gray-500">{user.email}</p>
-                          {!isEmailVerified && (
-                            <p className="text-xs text-yellow-600 mt-1 flex items-center gap-1">
-                              <AlertCircle className="h-3 w-3" /> Email not verified
-                            </p>
-                          )}
-                        </div>
+                        <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">{getUserInitial()}</div>
+                        <div><p className="font-medium text-gray-800">{getDisplayName()}</p><p className="text-xs text-gray-500">{user.email}</p>{!isEmailVerified && <p className="text-xs text-yellow-600 mt-1"><AlertCircle className="h-3 w-3 inline" /> Email not verified</p>}</div>
                       </div>
-                      
-                      {/* Only show Dashboard if email is verified */}
-                      {isEmailVerified && (
-                        <Link
-                          href="/company/dashboard"
-                          onClick={() => setIsOpen(false)}
-                          className="flex items-center gap-3 px-2 py-3 text-gray-700 hover:bg-cyan-50 rounded-lg"
-                        >
-                          <LayoutDashboard className="h-5 w-5" />
-                          Dashboard
-                        </Link>
-                      )}
-                      
-                      {!isEmailVerified && (
-                        <div className="px-2 py-3 bg-yellow-50 rounded-lg">
-                          <p className="text-sm text-yellow-800 flex items-center gap-2">
-                            <Mail className="h-4 w-4" />
-                            Please verify your email to access dashboard
-                          </p>
-                          <button 
-                            onClick={async () => {
-                              await auth.currentUser?.sendEmailVerification();
-                              toast.success('Verification email sent!');
-                            }}
-                            className="text-sm text-cyan-600 hover:underline mt-2"
-                          >
-                            Resend verification email
-                          </button>
-                        </div>
-                      )}
-                      
-                      <button
-                        onClick={handleLogout}
-                        className="flex items-center gap-3 px-2 py-3 text-red-600 hover:bg-red-50 rounded-lg"
-                      >
-                        <LogOut className="h-5 w-5" />
-                        Logout
-                      </button>
+                      {isEmailVerified && <Link href="/company/dashboard" onClick={() => setIsOpen(false)} className="flex items-center gap-3 px-2 py-3 text-gray-700 hover:bg-cyan-50 rounded-lg"><LayoutDashboard className="h-5 w-5" /> Dashboard</Link>}
+                      {!isEmailVerified && <div className="px-2 py-3 bg-yellow-50 rounded-lg"><p className="text-sm text-yellow-800"><Mail className="h-4 w-4 inline" /> Please verify your email to access dashboard</p><button onClick={async () => { await auth.currentUser?.sendEmailVerification(); toast.success('Verification email sent!'); }} className="text-sm text-cyan-600 hover:underline mt-2">Resend verification email</button></div>}
+                      <button onClick={handleLogout} className="flex items-center gap-3 px-2 py-3 text-red-600 hover:bg-red-50 rounded-lg"><LogOut className="h-5 w-5" /> Logout</button>
                     </>
                   ) : (
                     <>
-                      <Link
-                        href="/login"
-                        onClick={() => setIsOpen(false)}
-                        className="bg-cyan-600 text-white text-center px-4 py-3 rounded-xl"
-                      >
-                        Login
-                      </Link>
-                      <Link
-                        href="/signup"
-                        onClick={() => setIsOpen(false)}
-                        className="bg-gray-900 text-white text-center px-4 py-3 rounded-xl"
-                      >
-                        Sign Up
-                      </Link>
+                      <Link href="/company/login" onClick={() => setIsOpen(false)} className="bg-cyan-600 text-white text-center px-4 py-3 rounded-xl">Login</Link>
+                      <Link href="/company/signup" onClick={() => setIsOpen(false)} className="bg-gray-900 text-white text-center px-4 py-3 rounded-xl">Register</Link>
                     </>
                   )}
                 </>
