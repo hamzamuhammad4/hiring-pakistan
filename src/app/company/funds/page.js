@@ -224,7 +224,7 @@ export default function FundsPage() {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  // ✅ FIXED: File validation - Only JPG, PNG, PDF (Max 1MB)
+  // File validation - Only JPG, PNG, PDF (Max 1MB)
   const handleScreenshotChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -235,7 +235,7 @@ export default function FundsPage() {
         return;
       }
       
-      // ✅ MAX 1MB
+      // Max 1MB
       if (file.size > 1 * 1024 * 1024) {
         toast.error("File too large. Max 1MB");
         return;
@@ -245,7 +245,7 @@ export default function FundsPage() {
     }
   };
 
-  // ✅ FIXED: Handle payment method selection - Clear screenshot
+  // Handle payment method selection - Clear screenshot
   const handlePaymentMethodSelect = (method) => {
     setSelectedPaymentMethod(method);
     // Clear screenshot when payment method changes
@@ -450,7 +450,7 @@ export default function FundsPage() {
                   </div>
                 </div>
 
-                {/* ✅ Screenshot Upload with file type info and 1MB limit text */}
+                {/* Screenshot Upload with file type info and 1MB limit text */}
                 <div>
                   <label className="block font-semibold mb-2">Upload Payment Screenshot</label>
                   <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-cyan-500 transition">
@@ -619,19 +619,31 @@ export default function FundsPage() {
           ))}
         </div>
 
-        {/* Info Box */}
+        {/* Info Box - 4 points inline horizontally */}
         <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-6">
           <div className="flex gap-4">
-            <div className="bg-blue-500 p-3 rounded-full h-12 w-12 flex items-center justify-center">
+            <div className="bg-blue-500 p-3 rounded-full h-12 w-12 flex items-center justify-center flex-shrink-0">
               <CreditCard className="h-6 w-6 text-white" />
             </div>
-            <div>
-              <p className="font-semibold text-gray-800">📌 How it works?</p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
-                <div className="flex items-start gap-2"><span className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">1</span><p className="text-sm text-gray-600">Select a plan or credit pack</p></div>
-                <div className="flex items-start gap-2"><span className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">2</span><p className="text-sm text-gray-600">Send payment to our account</p></div>
-                <div className="flex items-start gap-2"><span className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">3</span><p className="text-sm text-gray-600">Upload screenshot of payment</p></div>
-                <div className="flex items-start gap-2"><span className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">4</span><p className="text-sm text-gray-600">Admin will verify & add credits</p></div>
+            <div className="flex-1">
+              <p className="font-semibold text-gray-800 mb-4">📌 How it works?</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="flex items-start gap-2">
+                  <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                  <p className="text-sm text-gray-600">Select a plan or credit pack</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                  <p className="text-sm text-gray-600">Send payment to our account</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                  <p className="text-sm text-gray-600">Upload screenshot of payment</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                  <p className="text-sm text-gray-600">Admin will verify & add credits</p>
+                </div>
               </div>
             </div>
           </div>
