@@ -1,7 +1,7 @@
 // src/components/JobCard.js
 import Link from "next/link";
 import Image from "next/image";
-import { Briefcase, MapPin, DollarSign, Users, Calendar, Building2, Clock, GraduationCap } from "lucide-react";
+import { Briefcase, MapPin, Users, Calendar, Building2, Clock, GraduationCap } from "lucide-react";
 
 export default function JobCard({ job }) {
   const postedDate = job.createdAt
@@ -12,11 +12,25 @@ export default function JobCard({ job }) {
       })
     : "Recent";
 
- 
-const formatSalary = (salary) => {
-  if (!salary) return "Negotiable";
-  return salary.replace(/\$/g, 'PKR ');
-};
+  const formatSalary = (salary) => {
+    if (!salary) return "Negotiable";
+    
+    // If salary already has PKR, return as is
+    if (typeof salary === 'string' && salary.includes('PKR')) {
+      return salary;
+    }
+    
+    // Convert string with $ to PKR
+    let formattedSalary = String(salary);
+    formattedSalary = formattedSalary.replace(/\$/g, 'PKR');
+    
+    // If no currency symbol was found, add PKR prefix
+    if (!formattedSalary.includes('PKR') && !formattedSalary.includes('Negotiable')) {
+      formattedSalary = `PKR ${formattedSalary}`;
+    }
+    
+    return formattedSalary;
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition duration-300">
@@ -56,7 +70,8 @@ const formatSalary = (salary) => {
           )}
           {job.salary && job.salary !== "Negotiable" && (
             <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded-lg text-xs font-semibold flex items-center gap-1">
-              <DollarSign className="h-2.5 w-2.5" /> {formatSalary(job.salary.length > 30 ? job.salary.substring(0, 25) + "..." : job.salary)}
+              {/* DollarSign icon removed */}
+              {formatSalary(job.salary.length > 30 ? job.salary.substring(0, 25) + "..." : job.salary)}
             </span>
           )}
         </div>
