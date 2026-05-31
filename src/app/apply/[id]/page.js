@@ -7,19 +7,18 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, addDoc, collection, serverTimestamp, updateDoc, increment } from "firebase/firestore";
 import Link from "next/link";
 import toast from 'react-hot-toast';
-import { Briefcase, Building2, User, Mail, Phone, MapPin, FileText, Upload, ChevronLeft, CheckCircle, AlertCircle, X, Plus } from "lucide-react";
+import { Briefcase, Building2, User, Mail, Phone, MapPin, Upload, ChevronLeft, CheckCircle, X, Plus } from "lucide-react";
 
 // Common skills suggestions
 const COMMON_SKILLS = [
   "JavaScript", "React", "Next.js", "Node.js", "Python", "Java", "C++", "C#",
   "HTML", "CSS", "Tailwind CSS", "Bootstrap", "PHP", "Laravel", "Django", "Flask",
   "MongoDB", "PostgreSQL", "MySQL", "Firebase", "AWS", "Docker", "Git", "GitHub",
-  "TypeScript", "Angular", "Vue.js", "Svelte", "GraphQL", "REST API", "Redux",
+  "TypeScript", "Angular", "Vue.js", "GraphQL", "REST API", "Redux",
   "Figma", "Adobe XD", "Photoshop", "Illustrator", "UI/UX Design", "Graphic Design",
   "SEO", "Digital Marketing", "Content Writing", "Social Media", "WordPress",
-  "Shopify", "WooCommerce", "Excel", "Power BI", "Data Analysis", "Machine Learning",
-  "AI", "Deep Learning", "TensorFlow", "PyTorch", "Flutter", "React Native", "Swift",
-  "Kotlin", "Android", "iOS", "DevOps", "Kubernetes", "Jenkins", "CI/CD"
+  "Excel", "Data Analysis", "Machine Learning", "Flutter", "React Native",
+  "DevOps", "Kubernetes", "CI/CD"
 ];
 
 export default function ApplyPage() {
@@ -109,7 +108,7 @@ export default function ApplyPage() {
   };
 
   const handleSkillKeyPress = (e) => {
-    if (e.key === 'Enter' || e.key === ',') {
+    if (e.key === 'Enter') {
       e.preventDefault();
       if (skillInput.trim()) {
         addSkill(skillInput);
@@ -208,69 +207,136 @@ export default function ApplyPage() {
         </Link>
 
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          <div className="bg-gradient-to-r from-cyan-600 to-blue-700 text-white p-5 sm:p-6">
-            <div className="flex items-center gap-3 sm:gap-4">
-              <div className="bg-white/20 backdrop-blur rounded-xl p-2 sm:p-3">
-                <Briefcase className="h-6 w-6 sm:h-8 sm:w-8" />
+          {/* Header */}
+          <div className="bg-gradient-to-r from-cyan-600 to-blue-700 px-6 py-5">
+            <div className="flex items-center gap-4">
+              <div className="bg-white/20 backdrop-blur rounded-xl p-3">
+                <Briefcase className="h-7 w-7 text-white" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold">{job.title}</h1>
-                <p className="text-cyan-100 text-sm sm:text-base flex items-center gap-1"><Building2 className="h-3 w-3 sm:h-4 sm:w-4" /> Hiring Pakistan</p>
+                <h1 className="text-2xl font-bold text-white">{job.title}</h1>
+                <p className="text-cyan-100 text-sm flex items-center gap-1 mt-0.5">
+                  <Building2 className="h-3.5 w-3.5" /> Hiring Pakistan
+                </p>
               </div>
             </div>
           </div>
 
-          <div className="p-5 sm:p-8">
+          {/* ✅ INFO MESSAGE - MOVED TO TOP */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3 mx-6 mt-6">
+            <p className="text-sm text-green-700 flex items-center justify-center gap-2">
+              <CheckCircle className="h-4 w-4" /> No account required. Your application will be sent directly to the employer.
+            </p>
+          </div>
+
+          {/* Form */}
+          <div className="p-6">
             <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Name and Email */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-                  <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} placeholder="Full Name *" className="w-full pl-9 sm:pl-10 pr-3 py-2.5 sm:py-3 text-sm sm:text-base border rounded-xl focus:ring-2 focus:ring-cyan-500" required />
-                </div>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-                  <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Email Address *" className="w-full pl-9 sm:pl-10 pr-3 py-2.5 sm:py-3 text-sm sm:text-base border rounded-xl focus:ring-2 focus:ring-cyan-500" required />
-                </div>
-              </div>
-
-              {/* Phone and City */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-                  <input type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="Phone Number" className="w-full pl-9 sm:pl-10 pr-3 py-2.5 sm:py-3 text-sm sm:text-base border rounded-xl focus:ring-2 focus:ring-cyan-500" />
-                </div>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-                  <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="City" className="w-full pl-9 sm:pl-10 pr-3 py-2.5 sm:py-3 text-sm sm:text-base border rounded-xl focus:ring-2 focus:ring-cyan-500" />
-                </div>
-              </div>
-
-              {/* Experience and Skills */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-                <select name="experience" value={formData.experience} onChange={handleChange} className="w-full px-4 py-2.5 sm:py-3 text-sm sm:text-base border rounded-xl focus:ring-2 focus:ring-cyan-500">
-                  <option value="">Select Experience</option>
-                  <option>Fresher</option><option>1-2 years</option><option>3-5 years</option><option>5-7 years</option><option>7+ years</option>
-                </select>
-
-                {/* Skills Field - Improved Layout */}
+              {/* Row 1: Full Name & Email */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <div className="border rounded-xl focus-within:ring-2 focus-within:ring-cyan-500 p-2 bg-white">
-                    {/* Skills Tags */}
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Full Name <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      type="text"
+                      name="fullName"
+                      value={formData.fullName}
+                      onChange={handleChange}
+                      className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                      placeholder="Enter your full name"
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Email Address <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500"
+                      placeholder="you@example.com"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 2: Phone & City */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone Number</label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500"
+                      placeholder="03XXXXXXXXX"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">City</label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      type="text"
+                      name="city"
+                      value={formData.city}
+                      onChange={handleChange}
+                      className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg"
+                      placeholder="Karachi, Lahore, Islamabad..."
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 3: Experience & Skills */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Experience</label>
+                  <select
+                    name="experience"
+                    value={formData.experience}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 bg-white"
+                  >
+                    <option value="">Select Experience</option>
+                    <option value="Fresher">Fresher (No experience)</option>
+                    <option value="1-2 years">1 - 2 years</option>
+                    <option value="3-5 years">3 - 5 years</option>
+                    <option value="5-7 years">5 - 7 years</option>
+                    <option value="7+ years">7+ years</option>
+                  </select>
+                </div>
+
+                {/* Skills Field */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Skills</label>
+                  <div className="border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-cyan-500 focus-within:border-transparent p-2 bg-white">
                     {formData.skills.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mb-2">
                         {formData.skills.map((skill, index) => (
-                          <span key={index} className="inline-flex items-center gap-1 bg-cyan-100 text-cyan-800 px-2 py-1 rounded-lg text-xs sm:text-sm">
+                          <span key={index} className="inline-flex items-center gap-1 bg-cyan-100 text-cyan-800 px-2 py-1 rounded-md text-sm">
                             {skill}
-                            <button type="button" onClick={() => removeSkill(skill)} className="hover:text-red-600 transition">
+                            <button type="button" onClick={() => removeSkill(skill)} className="hover:text-red-600">
                               <X className="h-3 w-3" />
                             </button>
                           </span>
                         ))}
                       </div>
                     )}
-                    
-                    {/* Skill Input */}
                     <div className="relative">
                       <input
                         ref={inputRef}
@@ -279,24 +345,13 @@ export default function ApplyPage() {
                         onChange={(e) => setSkillInput(e.target.value)}
                         onKeyDown={handleSkillKeyPress}
                         placeholder={formData.skills.length === 0 ? "Type a skill and press Enter..." : "Add more skills..."}
-                        className="w-full px-2 py-1 outline-none text-sm sm:text-base"
+                        className="w-full px-2 py-1 outline-none text-sm"
                       />
-                      
-                      {/* Suggestions Dropdown */}
                       {showSuggestions && suggestions.length > 0 && (
-                        <div
-                          ref={suggestionsRef}
-                          className="absolute z-10 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto"
-                        >
+                        <div ref={suggestionsRef} className="absolute z-10 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                           {suggestions.map((skill, index) => (
-                            <button
-                              key={index}
-                              type="button"
-                              onClick={() => addSkill(skill)}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition flex items-center justify-between"
-                            >
-                              <span>{skill}</span>
-                              <Plus className="h-3 w-3 text-gray-400" />
+                            <button key={index} type="button" onClick={() => addSkill(skill)} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center justify-between">
+                              <span>{skill}</span><Plus className="h-3 w-3 text-gray-400" />
                             </button>
                           ))}
                         </div>
@@ -308,37 +363,49 @@ export default function ApplyPage() {
               </div>
 
               {/* Cover Letter */}
-              <textarea name="coverLetter" value={formData.coverLetter} onChange={handleChange} rows="4" placeholder="Cover Letter (Optional)" className="w-full px-4 py-3 text-sm sm:text-base border rounded-xl focus:ring-2 focus:ring-cyan-500" />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Cover Letter</label>
+                <textarea
+                  name="coverLetter"
+                  value={formData.coverLetter}
+                  onChange={handleChange}
+                  rows="4"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500"
+                  placeholder="Tell us why you're a great fit for this position..."
+                />
+              </div>
 
               {/* CV Upload */}
-              <div className="border-2 border-dashed rounded-xl p-6 text-center">
-                {cvPreview ? (
-                  <div>
-                    <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-2" />
-                    <p className="text-sm break-all">{cvPreview}</p>
-                    <button type="button" onClick={() => { setCvFile(null); setCvPreview(null); }} className="text-red-500 text-sm mt-2 hover:underline">Remove</button>
-                  </div>
-                ) : (
-                  <label className="cursor-pointer block">
-                    <Upload className="h-10 w-10 text-gray-400 mx-auto mb-2" />
-                    <p className="text-gray-500 text-sm">Click to upload CV</p>
-                    <p className="text-xs text-gray-400 mt-1">PDF, DOC, DOCX (Max 5MB)</p>
-                    <input type="file" accept=".pdf,.doc,.docx" onChange={handleFileChange} className="hidden" required />
-                  </label>
-                )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Upload CV <span className="text-red-500">*</span></label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-cyan-500 transition">
+                  {cvPreview ? (
+                    <div>
+                      <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600 break-all">{cvPreview}</p>
+                      <button type="button" onClick={() => { setCvFile(null); setCvPreview(null); }} className="text-red-500 text-sm mt-2 hover:underline">Remove file</button>
+                    </div>
+                  ) : (
+                    <label className="cursor-pointer block">
+                      <Upload className="h-10 w-10 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-500">Click to upload your CV/Resume</p>
+                      <p className="text-xs text-gray-400 mt-1">PDF, DOC, DOCX (Max 5MB)</p>
+                      <input type="file" accept=".pdf,.doc,.docx" onChange={handleFileChange} className="hidden" required />
+                    </label>
+                  )}
+                </div>
               </div>
 
               {/* Submit Button */}
-              <button type="submit" disabled={submitting} className="w-full bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-700 hover:to-blue-800 text-white font-bold py-3 rounded-xl transition disabled:opacity-50">
-                {submitting ? "Submitting..." : "Submit Application"}
+              <button type="submit" disabled={submitting} className="w-full bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-700 hover:to-blue-800 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50 mt-2">
+                {submitting ? (
+                  <span className="flex items-center justify-center gap-2"><div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div> Submitting...</span>
+                ) : (
+                  "Submit Application"
+                )}
               </button>
             </form>
           </div>
-        </div>
-        
-        {/* Note */}
-        <div className="mt-4 text-center text-xs sm:text-sm text-gray-500">
-          <p>✅ No account required. Your application will be sent directly to the employer.</p>
         </div>
       </div>
     </div>
