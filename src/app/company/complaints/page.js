@@ -4,16 +4,14 @@
 import { useState, useEffect } from "react";
 import { db, auth } from "@/lib/firebase";
 import { 
-  collection, addDoc, query, where, getDocs, 
-  doc, updateDoc, deleteDoc, orderBy, onSnapshot,
+  collection, addDoc, query, where, orderBy, onSnapshot,
   serverTimestamp 
 } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import toast from 'react-hot-toast';
 import { 
-  AlertTriangle, Plus, Eye, CheckCircle, XCircle,
-  Clock, MessageSquare, Send, Trash2
+  AlertTriangle, Plus, CheckCircle, Clock, Upload, X, Image as ImageIcon
 } from "lucide-react";
 
 export default function CompanyComplaints() {
@@ -22,6 +20,9 @@ export default function CompanyComplaints() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
+  const [uploading, setUploading] = useState(false);
   
   const [formData, setFormData] = useState({
     title: "",
@@ -53,7 +54,6 @@ export default function CompanyComplaints() {
         return;
       }
 
-      // Real-time complaints listener
       const q = query(
         collection(db, "complaints"),
         where("companyId", "==", user.uid),
@@ -64,8 +64,7 @@ export default function CompanyComplaints() {
         const complaintsList = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate?.() || new Date(),
-          resolvedAt: doc.data().resolvedAt?.toDate?.() || null
+          createdAt: doc.data().createdAt?.toDate?.() || new Date()
         }));
         setComplaints(complaintsList);
         setLoading(false);
@@ -81,6 +80,23 @@ export default function CompanyComplaints() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error("File too large. Max 2MB");
+        return;
+      }
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview("");
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -90,9 +106,28 @@ export default function CompanyComplaints() {
     }
 
     setSubmitting(true);
+    setUploading(true);
     
     try {
       const user = auth.currentUser;
+      let attachmentUrl = "";
+      
+      // Upload image if exists
+      if (imageFile) {
+        const uploadFormData = new FormData();
+        uploadFormData.append('image', imageFile);
+        
+        const uploadRes = await fetch('/api/upload-complaint-image', {
+          method: 'POST',
+          body: uploadFormData,
+        });
+        
+        const uploadData = await uploadRes.json();
+        if (uploadData.success) {
+          attachmentUrl = uploadData.url;
+        }
+      }
+
       await addDoc(collection(db, "complaints"), {
         companyId: user.uid,
         companyEmail: user.email,
@@ -100,6 +135,7 @@ export default function CompanyComplaints() {
         category: formData.category,
         description: formData.description,
         priority: formData.priority,
+        attachment: attachmentUrl,
         status: 'pending',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
@@ -108,12 +144,15 @@ export default function CompanyComplaints() {
       toast.success("Complaint submitted successfully!");
       setShowForm(false);
       setFormData({ title: "", category: "technical", description: "", priority: "medium" });
+      setImageFile(null);
+      setImagePreview("");
       
     } catch (error) {
       console.error(error);
       toast.error("Failed to submit complaint");
     } finally {
       setSubmitting(false);
+      setUploading(false);
     }
   };
 
@@ -146,7 +185,6 @@ export default function CompanyComplaints() {
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         
-        {/* Header */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
           <Link href="/company/dashboard" className="text-cyan-600 hover:underline mb-2 inline-block">
             ← Back to Dashboard
@@ -155,7 +193,6 @@ export default function CompanyComplaints() {
           <p className="text-gray-600">Submit and track your complaints</p>
         </div>
 
-        {/* New Complaint Button */}
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}
@@ -165,7 +202,6 @@ export default function CompanyComplaints() {
           </button>
         )}
 
-        {/* Complaint Form */}
         {showForm && (
           <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
             <h2 className="text-xl font-bold mb-4">Submit New Complaint</h2>
@@ -223,17 +259,47 @@ export default function CompanyComplaints() {
                 />
               </div>
               
+              {/* Image Upload */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Attach Screenshot (Optional)</label>
+                <div className="border-2 border-dashed rounded-lg p-4 text-center">
+                  {imagePreview ? (
+                    <div>
+                      <img src={imagePreview} alt="Preview" className="max-h-32 mx-auto mb-2 rounded" />
+                      <button
+                        type="button"
+                        onClick={removeImage}
+                        className="text-red-600 text-sm hover:underline flex items-center gap-1 mx-auto"
+                      >
+                        <X className="h-4 w-4" /> Remove Image
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="cursor-pointer block">
+                      <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-500 text-sm">Click to upload screenshot</p>
+                      <p className="text-xs text-gray-400">JPG, PNG (Max 2MB)</p>
+                      <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                    </label>
+                  )}
+                </div>
+              </div>
+              
               <div className="flex gap-3">
                 <button
                   type="submit"
                   disabled={submitting}
                   className="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-2 rounded-lg disabled:bg-gray-400"
                 >
-                  {submitting ? "Submitting..." : "Submit Complaint"}
+                  {submitting ? (uploading ? "Uploading..." : "Submitting...") : "Submit Complaint"}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowForm(false)}
+                  onClick={() => {
+                    setShowForm(false);
+                    setImageFile(null);
+                    setImagePreview("");
+                  }}
                   className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300"
                 >
                   Cancel
@@ -243,7 +309,6 @@ export default function CompanyComplaints() {
           </div>
         )}
 
-        {/* Complaints List */}
         <h2 className="text-xl font-bold mb-4">Your Complaints</h2>
         
         {complaints.length === 0 ? (
@@ -275,6 +340,19 @@ export default function CompanyComplaints() {
                   </div>
                   
                   <p className="text-gray-600 mt-3">{complaint.description}</p>
+                  
+                  {complaint.attachment && (
+                    <div className="mt-3">
+                      <a 
+                        href={complaint.attachment} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-cyan-600 text-sm flex items-center gap-1 hover:underline"
+                      >
+                        <ImageIcon className="h-4 w-4" /> View Attached Screenshot
+                      </a>
+                    </div>
+                  )}
                   
                   {complaint.adminResponse && (
                     <div className="mt-4 bg-green-50 p-3 rounded-lg">

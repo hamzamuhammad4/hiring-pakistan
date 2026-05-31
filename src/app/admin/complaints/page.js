@@ -10,7 +10,7 @@ import {
 import toast from 'react-hot-toast';
 import { 
   AlertTriangle, Search, CheckCircle, XCircle,
-  Eye, Trash2, Clock, Building2, RefreshCw
+  Eye, Trash2, Clock, Building2, RefreshCw, Image as ImageIcon, FileText, X
 } from "lucide-react";
 import Link from "next/link";
 
@@ -23,6 +23,8 @@ export default function AdminComplaints() {
   const [showModal, setShowModal] = useState(false);
   const [response, setResponse] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState("");
   const [stats, setStats] = useState({ total: 0, pending: 0, resolved: 0 });
 
   useEffect(() => {
@@ -77,10 +79,6 @@ export default function AdminComplaints() {
         resolvedBy: 'admin'
       });
       
-      setComplaints(complaints.map(c => 
-        c.id === selectedComplaint.id ? { ...c, status: 'resolved', adminResponse: response } : c
-      ));
-      
       toast.success("Complaint resolved successfully!");
       setShowModal(false);
       setSelectedComplaint(null);
@@ -132,6 +130,18 @@ export default function AdminComplaints() {
       urgent: 'bg-red-100 text-red-700'
     };
     return colors[priority] || 'bg-gray-100 text-gray-700';
+  };
+
+  // Get attachment URL (supports multiple field names)
+  const getAttachmentUrl = (complaint) => {
+    return complaint.attachment || complaint.attachmentUrl || complaint.image || complaint.screenshot || null;
+  };
+
+  // Check if attachment is an image
+  const isImage = (url) => {
+    if (!url) return false;
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+    return imageExtensions.some(ext => url.toLowerCase().includes(ext));
   };
 
   if (loading) {
@@ -213,7 +223,7 @@ export default function AdminComplaints() {
         </div>
       )}
 
-      {/* Modal */}
+      {/* Main Modal */}
       {showModal && selectedComplaint && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -232,6 +242,49 @@ export default function AdminComplaints() {
                 <p className="font-medium mb-2">Description:</p>
                 <p className="text-gray-700">{selectedComplaint.description}</p>
               </div>
+              
+              {/* ✅ Show Attached Image */}
+              {getAttachmentUrl(selectedComplaint) && (
+                <div className="border rounded-lg p-4">
+                  <p className="font-medium mb-2 flex items-center gap-2">
+                    <ImageIcon className="h-4 w-4" /> Attached File:
+                  </p>
+                  {isImage(getAttachmentUrl(selectedComplaint)) ? (
+                    <div>
+                      <img 
+                        src={getAttachmentUrl(selectedComplaint)} 
+                        alt="Attachment" 
+                        className="max-h-48 rounded-lg cursor-pointer hover:opacity-80 transition"
+                        onClick={() => {
+                          setSelectedImage(getAttachmentUrl(selectedComplaint));
+                          setShowImageModal(true);
+                        }}
+                      />
+                      <button
+                        onClick={() => {
+                          setSelectedImage(getAttachmentUrl(selectedComplaint));
+                          setShowImageModal(true);
+                        }}
+                        className="mt-2 text-cyan-600 text-sm hover:underline"
+                      >
+                        View Full Image →
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                      <FileText className="h-8 w-8 text-gray-500" />
+                      <a 
+                        href={getAttachmentUrl(selectedComplaint)} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-cyan-600 hover:underline break-all text-sm"
+                      >
+                        {getAttachmentUrl(selectedComplaint).split('/').pop()}
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
               
               {selectedComplaint.adminResponse && (
                 <div className="bg-green-50 p-4 rounded-lg">
@@ -264,6 +317,25 @@ export default function AdminComplaints() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Fullscreen Modal */}
+      {showImageModal && selectedImage && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+          <div className="relative max-w-4xl max-h-[90vh]">
+            <button
+              onClick={() => setShowImageModal(false)}
+              className="absolute -top-10 right-0 text-white hover:text-gray-300 text-2xl"
+            >
+              ✕ Close
+            </button>
+            <img 
+              src={selectedImage} 
+              alt="Full size" 
+              className="max-w-full max-h-[85vh] object-contain rounded-lg"
+            />
           </div>
         </div>
       )}
