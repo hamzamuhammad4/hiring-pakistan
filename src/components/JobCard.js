@@ -13,10 +13,10 @@ export default function JobCard({ job }) {
     : "Recent";
 
  
-  const formatSalary = (salary) => {
-    if (!salary) return "Negotiable";
-    return salary.replace(/\$/g, 'PKR');
-  };
+const formatSalary = (salary) => {
+  if (!salary) return "Negotiable";
+  return salary.replace(/\$/g, 'PKR ');
+};
 
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition duration-300">
