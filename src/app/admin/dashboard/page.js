@@ -199,7 +199,7 @@ export default function AdminDashboard() {
         />
         <StatCard 
           title="Total Earnings" 
-  value={`Rs ${stats.totalEarnings.toLocaleString()}`}  // ← ₹ ki jagah Rs
+  value={`PKR ${stats.totalEarnings.toLocaleString()}`}  // ← ₹ ki jagah Rs
   icon={DollarSign}
   color="bg-amber-500 text-white"
   bgColor="bg-amber-50"
