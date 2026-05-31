@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 import { 
   Building2, Search, Eye, Ban, CheckCircle, 
   Trash2, Mail, Phone, Calendar, MoreVertical,
-  ChevronLeft, ChevronRight, AlertTriangle
+  ChevronLeft, ChevronRight, AlertTriangle, RefreshCw
 } from "lucide-react";
 
 export default function AdminCompanies() {
@@ -30,7 +30,6 @@ export default function AdminCompanies() {
       setLoading(true);
       setError(null);
       
-      // Try to get companies collection
       let companiesList = [];
       try {
         const companiesSnap = await getDocs(collection(db, "companies"));
@@ -116,9 +115,9 @@ export default function AdminCompanies() {
         <p className="text-gray-500 mb-4">{error}</p>
         <button 
           onClick={fetchCompanies}
-          className="bg-cyan-600 text-white px-6 py-2 rounded-lg hover:bg-cyan-700"
+          className="bg-cyan-600 text-white px-6 py-2 rounded-lg hover:bg-cyan-700 flex items-center gap-2 mx-auto"
         >
-          Retry
+          <RefreshCw className="h-4 w-4" /> Retry
         </button>
         <p className="text-xs text-gray-400 mt-4">
           Tip: Companies will appear here once they register.
@@ -220,6 +219,12 @@ export default function AdminCompanies() {
                         <Mail className="h-4 w-4 text-gray-400" />
                         {company.email}
                       </div>
+                      {company.phone && (
+                        <div className="flex items-center gap-2 text-sm mt-1">
+                          <Phone className="h-4 w-4 text-gray-400" />
+                          {company.phone}
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">
