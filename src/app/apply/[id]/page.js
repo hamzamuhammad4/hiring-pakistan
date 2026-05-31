@@ -34,7 +34,7 @@ export default function ApplyPage() {
     phone: "", 
     city: "", 
     experience: "", 
-    skills: [],  // Changed from string to array
+    skills: [],
     coverLetter: ""
   });
   const [skillInput, setSkillInput] = useState("");
@@ -64,7 +64,6 @@ export default function ApplyPage() {
     fetchJob();
   }, [id, router]);
 
-  // Handle click outside to close suggestions
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (suggestionsRef.current && !suggestionsRef.current.contains(event.target) &&
@@ -76,7 +75,6 @@ export default function ApplyPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Filter suggestions based on input
   useEffect(() => {
     if (skillInput.trim() === "") {
       setSuggestions([]);
@@ -97,7 +95,6 @@ export default function ApplyPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Add skill from input
   const addSkill = (skill) => {
     const trimmedSkill = skill.trim();
     if (trimmedSkill && !formData.skills.includes(trimmedSkill)) {
@@ -111,15 +108,15 @@ export default function ApplyPage() {
     inputRef.current?.focus();
   };
 
-  // Handle key press (Enter to add)
   const handleSkillKeyPress = (e) => {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
-      addSkill(skillInput);
+      if (skillInput.trim()) {
+        addSkill(skillInput);
+      }
     }
   };
 
-  // Remove skill
   const removeSkill = (skillToRemove) => {
     setFormData(prev => ({
       ...prev,
@@ -148,7 +145,6 @@ export default function ApplyPage() {
 
     setSubmitting(true);
     try {
-      // Upload CV to VPS storage
       const uploadFormData = new FormData();
       uploadFormData.append('cv', cvFile);
       
@@ -165,21 +161,19 @@ export default function ApplyPage() {
       
       const cvUrl = uploadData.url;
 
-      // Save application to Firestore with skills as comma-separated string
       await addDoc(collection(db, "applications"), {
         jobId: id, 
         jobTitle: job.title, 
         companyId: job.companyId, 
         companyName: job.companyName,
         ...formData,
-        skills: formData.skills.join(", "), // Convert array to comma-separated string
+        skills: formData.skills.join(", "),
         cvUrl: cvUrl,
         status: "pending", 
         appliedAt: serverTimestamp(), 
         createdAt: serverTimestamp()
       });
 
-      // Update applicants count
       const jobRef = doc(db, "jobs", id);
       await updateDoc(jobRef, {
         applicantsCount: increment(1)
@@ -214,64 +208,67 @@ export default function ApplyPage() {
         </Link>
 
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          <div className="bg-gradient-to-r from-cyan-600 to-blue-700 text-white p-6">
-            <div className="flex items-center gap-4">
-              <div className="bg-white/20 backdrop-blur rounded-xl p-3">
-                <Briefcase className="h-8 w-8" />
+          <div className="bg-gradient-to-r from-cyan-600 to-blue-700 text-white p-5 sm:p-6">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="bg-white/20 backdrop-blur rounded-xl p-2 sm:p-3">
+                <Briefcase className="h-6 w-6 sm:h-8 sm:w-8" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">{job.title}</h1>
-                <p className="opacity-90 flex items-center gap-1"><Building2 className="h-4 w-4" /> Hiring Pakistan</p>
+                <h1 className="text-xl sm:text-2xl font-bold">{job.title}</h1>
+                <p className="text-cyan-100 text-sm sm:text-base flex items-center gap-1"><Building2 className="h-3 w-3 sm:h-4 sm:w-4" /> Hiring Pakistan</p>
               </div>
             </div>
           </div>
 
-          <div className="p-6 md:p-8">
+          <div className="p-5 sm:p-8">
             <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="grid md:grid-cols-2 gap-5">
+              {/* Name and Email */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} placeholder="Full Name *" className="w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-cyan-500" required />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+                  <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} placeholder="Full Name *" className="w-full pl-9 sm:pl-10 pr-3 py-2.5 sm:py-3 text-sm sm:text-base border rounded-xl focus:ring-2 focus:ring-cyan-500" required />
                 </div>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Email Address *" className="w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-cyan-500" required />
-                </div>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="Phone Number" className="w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-cyan-500" />
-                </div>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="City" className="w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-cyan-500" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+                  <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Email Address *" className="w-full pl-9 sm:pl-10 pr-3 py-2.5 sm:py-3 text-sm sm:text-base border rounded-xl focus:ring-2 focus:ring-cyan-500" required />
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-5">
-                <select name="experience" value={formData.experience} onChange={handleChange} className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-cyan-500">
-                  <option value="">Experience</option>
+              {/* Phone and City */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+                  <input type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="Phone Number" className="w-full pl-9 sm:pl-10 pr-3 py-2.5 sm:py-3 text-sm sm:text-base border rounded-xl focus:ring-2 focus:ring-cyan-500" />
+                </div>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+                  <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="City" className="w-full pl-9 sm:pl-10 pr-3 py-2.5 sm:py-3 text-sm sm:text-base border rounded-xl focus:ring-2 focus:ring-cyan-500" />
+                </div>
+              </div>
+
+              {/* Experience and Skills */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                <select name="experience" value={formData.experience} onChange={handleChange} className="w-full px-4 py-2.5 sm:py-3 text-sm sm:text-base border rounded-xl focus:ring-2 focus:ring-cyan-500">
+                  <option value="">Select Experience</option>
                   <option>Fresher</option><option>1-2 years</option><option>3-5 years</option><option>5-7 years</option><option>7+ years</option>
                 </select>
-                
-                {/* ✅ Skills Field with Tags Input */}
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Skills (comma separated)</label>
-                  <div className="border rounded-xl focus-within:ring-2 focus-within:ring-cyan-500 focus-within:border-transparent p-2 bg-white">
+
+                {/* Skills Field - Improved Layout */}
+                <div>
+                  <div className="border rounded-xl focus-within:ring-2 focus-within:ring-cyan-500 p-2 bg-white">
                     {/* Skills Tags */}
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {formData.skills.map((skill, index) => (
-                        <span key={index} className="inline-flex items-center gap-1 bg-cyan-100 text-cyan-800 px-2 py-1 rounded-lg text-sm">
-                          {skill}
-                          <button
-                            type="button"
-                            onClick={() => removeSkill(skill)}
-                            className="hover:text-red-600 transition"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
+                    {formData.skills.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {formData.skills.map((skill, index) => (
+                          <span key={index} className="inline-flex items-center gap-1 bg-cyan-100 text-cyan-800 px-2 py-1 rounded-lg text-xs sm:text-sm">
+                            {skill}
+                            <button type="button" onClick={() => removeSkill(skill)} className="hover:text-red-600 transition">
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     
                     {/* Skill Input */}
                     <div className="relative">
@@ -281,8 +278,8 @@ export default function ApplyPage() {
                         value={skillInput}
                         onChange={(e) => setSkillInput(e.target.value)}
                         onKeyDown={handleSkillKeyPress}
-                        placeholder={formData.skills.length === 0 ? "Type a skill and press Enter or comma..." : "Add more skills..."}
-                        className="w-full px-2 py-1 outline-none text-sm"
+                        placeholder={formData.skills.length === 0 ? "Type a skill and press Enter..." : "Add more skills..."}
+                        className="w-full px-2 py-1 outline-none text-sm sm:text-base"
                       />
                       
                       {/* Suggestions Dropdown */}
@@ -306,37 +303,41 @@ export default function ApplyPage() {
                       )}
                     </div>
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">Type a skill and press Enter or comma to add</p>
+                  <p className="text-xs text-gray-400 mt-1">Press Enter to add skill</p>
                 </div>
               </div>
 
-              <textarea name="coverLetter" value={formData.coverLetter} onChange={handleChange} rows="4" placeholder="Cover Letter" className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-cyan-500" />
+              {/* Cover Letter */}
+              <textarea name="coverLetter" value={formData.coverLetter} onChange={handleChange} rows="4" placeholder="Cover Letter (Optional)" className="w-full px-4 py-3 text-sm sm:text-base border rounded-xl focus:ring-2 focus:ring-cyan-500" />
 
+              {/* CV Upload */}
               <div className="border-2 border-dashed rounded-xl p-6 text-center">
                 {cvPreview ? (
                   <div>
                     <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-2" />
-                    <p>{cvPreview}</p>
-                    <button type="button" onClick={() => { setCvFile(null); setCvPreview(null); }} className="text-red-500 text-sm mt-2">Remove</button>
+                    <p className="text-sm break-all">{cvPreview}</p>
+                    <button type="button" onClick={() => { setCvFile(null); setCvPreview(null); }} className="text-red-500 text-sm mt-2 hover:underline">Remove</button>
                   </div>
                 ) : (
                   <label className="cursor-pointer block">
                     <Upload className="h-10 w-10 text-gray-400 mx-auto mb-2" />
-                    <p className="text-gray-500">Click to upload CV (PDF, DOC, DOCX, Max 5MB) *</p>
+                    <p className="text-gray-500 text-sm">Click to upload CV</p>
+                    <p className="text-xs text-gray-400 mt-1">PDF, DOC, DOCX (Max 5MB)</p>
                     <input type="file" accept=".pdf,.doc,.docx" onChange={handleFileChange} className="hidden" required />
                   </label>
                 )}
               </div>
 
-              <button type="submit" disabled={submitting} className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 rounded-xl transition disabled:bg-gray-400">
+              {/* Submit Button */}
+              <button type="submit" disabled={submitting} className="w-full bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-700 hover:to-blue-800 text-white font-bold py-3 rounded-xl transition disabled:opacity-50">
                 {submitting ? "Submitting..." : "Submit Application"}
               </button>
             </form>
           </div>
         </div>
         
-        {/* No Login Required Note */}
-        <div className="mt-4 text-center text-sm text-gray-500">
+        {/* Note */}
+        <div className="mt-4 text-center text-xs sm:text-sm text-gray-500">
           <p>✅ No account required. Your application will be sent directly to the employer.</p>
         </div>
       </div>
