@@ -9,6 +9,9 @@ import Link from "next/link";
 import toast from 'react-hot-toast';
 import { Briefcase, Lock, Eye, EyeOff, CheckCircle, AlertCircle } from "lucide-react";
 
+// ✅ IMPORTANT: Disable static prerendering for this page
+export const dynamic = 'force-dynamic';
+
 export default function ResetPasswordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
