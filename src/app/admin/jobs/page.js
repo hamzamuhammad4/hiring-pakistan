@@ -148,7 +148,6 @@ export default function AdminJobs() {
     }
   };
 
-  // ✅ EDIT FUNCTION
   const handleEdit = (jobId) => {
     router.push(`/admin/jobs/edit/${jobId}`);
   };
@@ -332,41 +331,37 @@ export default function AdminJobs() {
                           onClick={() => handleApprove(job.id)}
                           className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-1"
                         >
-                          <CheckCircle className="h-4 w-4" />
-                          Approve
+                          <CheckCircle className="h-4 w-4" /> Approve
                         </button>
                         <button
                           onClick={() => handleReject(job.id)}
                           className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-1"
                         >
-                          <XCircle className="h-4 w-4" />
-                          Reject
+                          <XCircle className="h-4 w-4" /> Reject
                         </button>
                       </div>
                     )}
 
-                    <div className="flex gap-2">
-                      {/* ✅ EDIT BUTTON ADDED */}
+                    {/* ✅ ALL BUTTONS SAME SIZE */}
+                    <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => handleEdit(job.id)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg text-sm flex items-center gap-1"
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1 transition"
                       >
-                        <Edit className="h-4 w-4" /> Edit
+                        <Edit className="h-3.5 w-3.5" /> Edit
                       </button>
                       <Link
                         href={`/jobs/${job.id}`}
                         target="_blank"
-                        className="text-cyan-600 hover:text-cyan-800 text-sm flex items-center gap-1"
+                        className="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1 transition"
                       >
-                        <ExternalLink className="h-4 w-4" />
-                        View Job
+                        <ExternalLink className="h-3.5 w-3.5" /> View Job
                       </Link>
                       <button
                         onClick={() => handleDelete(job.id)}
-                        className="text-red-600 hover:text-red-800 text-sm flex items-center gap-1"
+                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1 transition"
                       >
-                        <Trash2 className="h-4 w-4" />
-                        Delete
+                        <Trash2 className="h-3.5 w-3.5" /> Delete
                       </button>
                     </div>
                   </div>
