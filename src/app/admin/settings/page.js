@@ -3,17 +3,27 @@
 
 import { useState } from "react";
 import { auth } from "@/lib/firebase";
-import { updatePassword, sendEmailVerification } from "firebase/auth";
+import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import toast from 'react-hot-toast';
-import { Settings, Mail, Lock, Bell, Shield, Save } from "lucide-react";
+import { Settings, Mail, Lock, Bell, Shield, Save, Eye, EyeOff } from "lucide-react";
 
 export default function AdminSettings() {
   const [activeTab, setActiveTab] = useState("profile");
   const [passwords, setPasswords] = useState({ current: "", new: "", confirm: "" });
   const [loading, setLoading] = useState(false);
+  
+  // State for password visibility
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
+    
+    if (!passwords.current) {
+      toast.error("Please enter current password");
+      return;
+    }
     
     if (passwords.new !== passwords.confirm) {
       toast.error("New passwords don't match");
@@ -27,12 +37,19 @@ export default function AdminSettings() {
     
     setLoading(true);
     try {
-      await updatePassword(auth.currentUser, passwords.new);
+      const user = auth.currentUser;
+      const credential = EmailAuthProvider.credential(user.email, passwords.current);
+      await reauthenticateWithCredential(user, credential);
+      await updatePassword(user, passwords.new);
       toast.success("Password updated successfully!");
       setPasswords({ current: "", new: "", confirm: "" });
     } catch (error) {
       console.error(error);
-      toast.error(error.message);
+      if (error.code === 'auth/wrong-password') {
+        toast.error("Current password is incorrect");
+      } else {
+        toast.error(error.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -93,14 +110,14 @@ export default function AdminSettings() {
             </div>
             <div>
               <h2 className="text-xl font-bold">Admin Account</h2>
-              <p className="text-gray-500">firebasehiringpakistan@gmail.com</p>
+              <p className="text-gray-500">{auth.currentUser?.email}</p>
             </div>
           </div>
           
           <div className="border-t pt-6">
             <button
               onClick={handleVerifyEmail}
-              className="bg-cyan-600 text-white px-6 py-3 rounded-lg flex items-center gap-2"
+              className="bg-cyan-600 text-white px-6 py-3 rounded-lg flex items-center gap-2 hover:bg-cyan-700 transition"
             >
               <Mail className="h-4 w-4" /> Verify Email
             </button>
@@ -114,31 +131,74 @@ export default function AdminSettings() {
           <h2 className="text-xl font-bold mb-6">Change Password</h2>
           
           <form onSubmit={handlePasswordChange} className="max-w-md space-y-4">
+            {/* Current Password Field */}
+            <div>
+              <label className="block font-medium mb-2">Current Password</label>
+              <div className="relative">
+                <input
+                  type={showCurrentPassword ? "text" : "password"}
+                  value={passwords.current}
+                  onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
+                  className="w-full border rounded-lg px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showCurrentPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
+
+            {/* New Password Field */}
             <div>
               <label className="block font-medium mb-2">New Password</label>
-              <input
-                type="password"
-                value={passwords.new}
-                onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
-                className="w-full border rounded-lg px-4 py-3"
-                required
-                minLength="6"
-              />
+              <div className="relative">
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  value={passwords.new}
+                  onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
+                  className="w-full border rounded-lg px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  required
+                  minLength="6"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showNewPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
             </div>
+
+            {/* Confirm Password Field */}
             <div>
               <label className="block font-medium mb-2">Confirm Password</label>
-              <input
-                type="password"
-                value={passwords.confirm}
-                onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
-                className="w-full border rounded-lg px-4 py-3"
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={passwords.confirm}
+                  onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
+                  className="w-full border rounded-lg px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
             </div>
+
             <button
               type="submit"
               disabled={loading}
-              className="bg-cyan-600 text-white px-6 py-3 rounded-lg flex items-center gap-2 disabled:bg-gray-400"
+              className="bg-cyan-600 text-white px-6 py-3 rounded-lg flex items-center gap-2 disabled:bg-gray-400 hover:bg-cyan-700 transition w-full justify-center"
             >
               <Save className="h-4 w-4" /> {loading ? "Updating..." : "Update Password"}
             </button>
@@ -170,7 +230,7 @@ export default function AdminSettings() {
             </label>
           </div>
           
-          <button className="mt-6 bg-cyan-600 text-white px-6 py-3 rounded-lg flex items-center gap-2">
+          <button className="mt-6 bg-cyan-600 text-white px-6 py-3 rounded-lg flex items-center gap-2 hover:bg-cyan-700 transition">
             <Save className="h-4 w-4" /> Save Settings
           </button>
         </div>
