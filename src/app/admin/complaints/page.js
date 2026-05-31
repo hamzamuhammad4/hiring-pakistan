@@ -11,8 +11,9 @@ import toast from 'react-hot-toast';
 import { 
   AlertTriangle, Search, CheckCircle, XCircle,
   Eye, Trash2, Clock, MessageSquare, Send,
-  Flag, Filter, Building2
+  Flag, Filter, Building2, RefreshCw
 } from "lucide-react";
+import Link from "next/link";
 
 export default function AdminComplaints() {
   const [complaints, setComplaints] = useState([]);
@@ -39,7 +40,8 @@ export default function AdminComplaints() {
         complaintsList = complaintsSnap.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate?.() || new Date()
+          createdAt: doc.data().createdAt?.toDate?.() || new Date(),
+          updatedAt: doc.data().updatedAt?.toDate?.() || null
         }));
       } catch (err) {
         console.log("Complaints collection not found:", err.message);
@@ -80,6 +82,12 @@ export default function AdminComplaints() {
         c.id === complaintId ? { ...c, status: 'resolved', adminResponse } : c
       ));
       
+      setStats(prev => ({
+        ...prev,
+        pending: prev.pending - 1,
+        resolved: prev.resolved + 1
+      }));
+      
       toast.success("Complaint resolved");
       setShowModal(false);
       setResponse("");
@@ -95,6 +103,12 @@ export default function AdminComplaints() {
     try {
       await deleteDoc(doc(db, "complaints", complaintId));
       setComplaints(complaints.filter(c => c.id !== complaintId));
+      setStats(prev => ({
+        ...prev,
+        total: prev.total - 1,
+        pending: complaints.find(c => c.id === complaintId)?.status === 'pending' ? prev.pending - 1 : prev.pending,
+        resolved: complaints.find(c => c.id === complaintId)?.status === 'resolved' ? prev.resolved - 1 : prev.resolved
+      }));
       toast.success("Complaint deleted");
     } catch (err) {
       toast.error("Failed to delete");
@@ -149,7 +163,7 @@ export default function AdminComplaints() {
             
             <div className="flex gap-2">
               <span className={`px-2 py-1 rounded-full text-xs ${getPriorityColor(selectedComplaint.priority)}`}>
-                {selectedComplaint.priority}
+                {selectedComplaint.priority || 'medium'}
               </span>
               <span className="px-2 py-1 bg-gray-100 rounded-full text-xs">
                 {getCategoryIcon(selectedComplaint.category)} {selectedComplaint.category}
@@ -209,15 +223,9 @@ export default function AdminComplaints() {
         <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
         <h3 className="text-xl font-bold text-gray-800 mb-2">Unable to Load Complaints</h3>
         <p className="text-gray-500 mb-4">{error}</p>
-        <button 
-          onClick={fetchComplaints}
-          className="bg-cyan-600 text-white px-6 py-2 rounded-lg hover:bg-cyan-700"
-        >
-          Retry
+        <button onClick={fetchComplaints} className="bg-cyan-600 text-white px-6 py-2 rounded-lg hover:bg-cyan-700">
+          <RefreshCw className="h-4 w-4 inline mr-2" /> Retry
         </button>
-        <p className="text-xs text-gray-400 mt-4">
-          Tip: Complaints will appear here when companies submit them.
-        </p>
       </div>
     );
   }
@@ -247,30 +255,18 @@ export default function AdminComplaints() {
 
       {/* Filter */}
       <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-        <div className="flex gap-2">
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-lg transition ${
-              filter === 'all' ? 'bg-cyan-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            All
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => setFilter('all')} className={`px-4 py-2 rounded-lg transition ${filter === 'all' ? 'bg-cyan-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
+            All ({stats.total})
           </button>
-          <button
-            onClick={() => setFilter('pending')}
-            className={`px-4 py-2 rounded-lg transition ${
-              filter === 'pending' ? 'bg-cyan-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            Pending
+          <button onClick={() => setFilter('pending')} className={`px-4 py-2 rounded-lg transition ${filter === 'pending' ? 'bg-yellow-500 text-white' : 'bg-gray-100 text-gray-600'}`}>
+            Pending ({stats.pending})
           </button>
-          <button
-            onClick={() => setFilter('resolved')}
-            className={`px-4 py-2 rounded-lg transition ${
-              filter === 'resolved' ? 'bg-cyan-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            Resolved
+          <button onClick={() => setFilter('resolved')} className={`px-4 py-2 rounded-lg transition ${filter === 'resolved' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
+            Resolved ({stats.resolved})
+          </button>
+          <button onClick={fetchComplaints} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center gap-2 ml-auto">
+            <RefreshCw className="h-4 w-4" /> Refresh
           </button>
         </div>
       </div>
@@ -289,9 +285,7 @@ export default function AdminComplaints() {
               <div className="flex flex-col md:flex-row justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-start gap-3">
-                    <div className={`p-2 rounded-xl ${
-                      complaint.status === 'resolved' ? 'bg-green-100' : 'bg-red-100'
-                    }`}>
+                    <div className={`p-2 rounded-xl ${complaint.status === 'resolved' ? 'bg-green-100' : 'bg-red-100'}`}>
                       {complaint.status === 'resolved' ? (
                         <CheckCircle className="h-5 w-5 text-green-600" />
                       ) : (
@@ -299,17 +293,17 @@ export default function AdminComplaints() {
                       )}
                     </div>
                     <div>
-                      <h3 className="font-bold text-gray-800">{complaint.title}</h3>
+                      <h3 className="font-bold text-gray-800 text-lg">{complaint.title}</h3>
                       <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
                         <Building2 className="h-3 w-3" />
                         {complaint.companyEmail || complaint.companyId?.slice(-8) || 'Unknown'}
                       </p>
-                      <div className="flex gap-2 mt-2">
+                      <div className="flex flex-wrap gap-2 mt-2">
                         <span className={`text-xs px-2 py-1 rounded-full ${getPriorityColor(complaint.priority)}`}>
                           {complaint.priority || 'medium'}
                         </span>
                         <span className="text-xs text-gray-500">
-                          {complaint.createdAt?.toLocaleDateString()}
+                          {complaint.createdAt?.toLocaleString()}
                         </span>
                       </div>
                     </div>
