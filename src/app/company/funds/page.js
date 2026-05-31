@@ -13,7 +13,7 @@ import toast from 'react-hot-toast';
 import { 
   CreditCard, Building2, Coins, Zap, CheckCircle,
   Upload, Phone, Landmark, AlertCircle,
-  Copy
+  Copy, X, Image as ImageIcon, FileText
 } from "lucide-react";
 
 // Payment Methods (Bank details - static)
@@ -113,7 +113,6 @@ export default function FundsPage() {
   // Fetch subscriptions from Firestore
   const fetchSubscriptions = async () => {
     try {
-      // ✅ Fetch ONLY active subscriptions
       const subsSnap = await getDocs(query(collection(db, "subscriptions"), where("status", "==", "active")));
       const subsList = subsSnap.docs.map(doc => ({
         id: doc.id,
@@ -121,14 +120,12 @@ export default function FundsPage() {
       }));
       
       if (subsList.length > 0) {
-        // Separate plans (with name) and credit packs (with type 'pack')
         const plans = subsList.filter(s => s.type === 'plan' || (s.name && !s.type));
         const packs = subsList.filter(s => s.type === 'pack' || (s.label && s.credits));
         
         setSubscriptions(plans.length > 0 ? plans : DEFAULT_PLANS);
         setCreditPacks(packs.length > 0 ? packs : DEFAULT_CREDIT_PACKS);
       } else {
-        // Use default plans if no subscriptions in Firestore
         setSubscriptions(DEFAULT_PLANS);
         setCreditPacks(DEFAULT_CREDIT_PACKS);
       }
@@ -227,15 +224,34 @@ export default function FundsPage() {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
+  // ✅ FIXED: File validation - Only JPG, PNG, PDF
   const handleScreenshotChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Check file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+      if (!validTypes.includes(file.type)) {
+        toast.error("Only JPG, PNG, and PDF files are allowed");
+        return;
+      }
+      
       if (file.size > 5 * 1024 * 1024) {
         toast.error("File too large. Max 5MB");
         return;
       }
       setScreenshot(file);
       setScreenshotPreview(URL.createObjectURL(file));
+    }
+  };
+
+  // ✅ FIXED: Handle payment method selection - Clear screenshot
+  const handlePaymentMethodSelect = (method) => {
+    setSelectedPaymentMethod(method);
+    // Clear screenshot when payment method changes
+    if (screenshot) {
+      setScreenshot(null);
+      setScreenshotPreview(null);
+      toast.info("Screenshot cleared. Please upload new screenshot for selected payment method.");
     }
   };
 
@@ -341,7 +357,7 @@ export default function FundsPage() {
               }} 
               className="text-gray-500 hover:text-gray-700"
             >
-              ✕
+              <X className="h-5 w-5" />
             </button>
           </div>
           
@@ -351,18 +367,18 @@ export default function FundsPage() {
                 <div className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white p-4 rounded-lg">
                   <p className="font-semibold mb-2">Payment Summary</p>
                   <p className="text-3xl font-bold">Rs {selectedItem.price?.toLocaleString() || 0}</p>
-                  <p className="text-sm opacity-90">{selectedItem.credits} credits will be added</p>
+                  <p className="text-sm opacity-90">{selectedItem.credits} credits</p>
                   {selectedPlan && <p className="text-sm opacity-90 mt-1">Plan: {selectedPlan.name}</p>}
                 </div>
 
                 <div>
                   <label className="block font-semibold mb-3">Select Payment Method</label>
                   <div className="space-y-3">
-                    {PAYMENT_METHODS.map((method) => (
+                    {PAYMENT_METHODS.map((m) => (
                       <label
-                        key={method.id}
+                        key={m.id}
                         className={`flex items-center p-4 border rounded-xl cursor-pointer transition ${
-                          selectedPaymentMethod?.id === method.id 
+                          selectedPaymentMethod?.id === m.id 
                             ? 'border-cyan-500 bg-cyan-50' 
                             : 'border-gray-200 hover:bg-gray-50'
                         }`}
@@ -370,12 +386,12 @@ export default function FundsPage() {
                         <input
                           type="radio"
                           name="paymentMethod"
-                          checked={selectedPaymentMethod?.id === method.id}
-                          onChange={() => setSelectedPaymentMethod(method)}
+                          checked={selectedPaymentMethod?.id === m.id}
+                          onChange={() => handlePaymentMethodSelect(m)}
                           className="mr-3"
                         />
-                        <method.icon className="h-5 w-5 mr-2 text-gray-600" />
-                        <span className="font-medium">{method.name}</span>
+                        <m.icon className="h-5 w-5 mr-2 text-gray-600" />
+                        <span className="font-medium">{m.name}</span>
                       </label>
                     ))}
                   </div>
@@ -395,7 +411,7 @@ export default function FundsPage() {
               <>
                 <div className="bg-yellow-50 p-4 rounded-lg">
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="text-yellow-600 text-xl">⚠️</span>
+                    <AlertCircle className="h-5 w-5 text-yellow-600" />
                     <p className="font-semibold text-yellow-800">Send payment to:</p>
                   </div>
                   
@@ -413,7 +429,7 @@ export default function FundsPage() {
                           onClick={() => copyToClipboard(method.accountNumber, 'Account Number')}
                           className="text-cyan-600 hover:text-cyan-800"
                         >
-                          📋 Copy
+                          <Copy className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
@@ -426,40 +442,53 @@ export default function FundsPage() {
                           onClick={() => copyToClipboard(method.iban, 'IBAN')}
                           className="text-cyan-600 hover:text-cyan-800"
                         >
-                          📋 Copy
+                          <Copy className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
                   </div>
                 </div>
 
+                {/* ✅ Screenshot Upload with file type info */}
                 <div>
                   <label className="block font-semibold mb-2">Upload Payment Screenshot</label>
                   <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-cyan-500 transition">
                     {screenshotPreview ? (
                       <div>
-                        <img src={screenshotPreview} alt="Screenshot" className="max-h-48 mx-auto mb-2 rounded-lg" />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setScreenshot(null);
-                            setScreenshotPreview(null);
-                          }}
-                          className="text-red-600 text-sm hover:underline"
-                        >
-                          Remove
-                        </button>
+                        {screenshot.type?.startsWith('image/') ? (
+                          <img src={screenshotPreview} alt="Screenshot" className="max-h-48 mx-auto mb-2 rounded-lg" />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-4">
+                            <FileText className="h-12 w-12 text-cyan-600 mb-2" />
+                            <p className="text-sm text-gray-600">{screenshot.name}</p>
+                          </div>
+                        )}
+                        <div className="flex justify-center gap-4 mt-2">
+                          <span className="text-xs text-gray-500">
+                            {screenshot.type?.includes('image') ? '🖼️ Image' : '📄 PDF'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setScreenshot(null);
+                              setScreenshotPreview(null);
+                            }}
+                            className="text-red-600 text-sm hover:underline flex items-center gap-1"
+                          >
+                            <X className="h-3 w-3" /> Remove
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <label className="cursor-pointer block">
                         <div className="bg-gray-100 p-4 rounded-lg">
-                          <span className="text-4xl">📸</span>
-                          <p className="text-gray-500 mt-2">Click to upload screenshot</p>
-                          <p className="text-xs text-gray-400 mt-1">JPG, PNG, PDF (Max 5MB)</p>
+                          <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                          <p className="text-gray-500">Click to upload screenshot</p>
+                          <p className="text-xs text-gray-400 mt-1">JPG, PNG, PDF only (Max 5MB)</p>
                         </div>
                         <input
                           type="file"
-                          accept="image/*,application/pdf"
+                          accept="image/jpeg,image/jpg,image/png,application/pdf"
                           onChange={handleScreenshotChange}
                           className="hidden"
                         />
@@ -472,7 +501,6 @@ export default function FundsPage() {
                   <button
                     onClick={() => {
                       setPaymentStep(1);
-                      setSelectedPaymentMethod(null);
                     }}
                     className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-300"
                   >
@@ -533,7 +561,7 @@ export default function FundsPage() {
           </div>
         </div>
 
-        {/* Subscription Plans - Dynamically from Firestore */}
+        {/* Subscription Plans */}
         <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
           <Zap className="h-6 w-6 text-cyan-600" />
           Subscription Plans
@@ -572,7 +600,7 @@ export default function FundsPage() {
           ))}
         </div>
 
-        {/* Credit Packs - Dynamically from Firestore */}
+        {/* Credit Packs */}
         <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
           <Coins className="h-6 w-6 text-purple-600" />
           Quick Credit Packs
