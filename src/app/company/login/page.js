@@ -7,11 +7,12 @@ import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import Link from "next/link";
 import toast from 'react-hot-toast';
-import { Briefcase, Mail, Lock, ArrowRight, KeyRound } from "lucide-react";
+import { Briefcase, Mail, Lock, ArrowRight, KeyRound, Eye, EyeOff } from "lucide-react";
 
 export default function CompanyLogin() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [forgotMode, setForgotMode] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [formData, setFormData] = useState({
@@ -52,7 +53,12 @@ export default function CompanyLogin() {
 
     setLoading(true);
     try {
-      await sendPasswordResetEmail(auth, resetEmail);
+      // ✅ Send reset email with action code settings
+      const actionCodeSettings = {
+        url: `${window.location.origin}/company/reset-password`,
+        handleCodeInApp: true,
+      };
+      await sendPasswordResetEmail(auth, resetEmail, actionCodeSettings);
       toast.success("Password reset email sent! Check your inbox.");
       setForgotMode(false);
       setResetEmail("");
@@ -121,7 +127,6 @@ export default function CompanyLogin() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8">
         
-        {/* Logo */}
         <div className="text-center mb-6">
           <div className="bg-gradient-to-r from-cyan-600 to-blue-700 w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-md">
             <Briefcase className="h-7 w-7 text-white" />
@@ -151,13 +156,24 @@ export default function CompanyLogin() {
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-500"
+                className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-500"
                 placeholder="Enter your password"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5 text-gray-400" />
+                ) : (
+                  <Eye className="h-5 w-5 text-gray-400" />
+                )}
+              </button>
             </div>
           </div>
 
