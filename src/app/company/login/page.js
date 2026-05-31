@@ -54,7 +54,7 @@ export default function CompanyLogin() {
     setLoading(true);
     try {
       const actionCodeSettings = {
-        url: `${window.location.origin}/reset-password`,
+        url: `https://hiringpakistan.co/reset-password`,
         handleCodeInApp: true,
         dynamicLinkDomain: 'hiringpakistan.co',
       };
