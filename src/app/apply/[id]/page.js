@@ -41,6 +41,7 @@ export default function ApplyPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [cvFile, setCvFile] = useState(null);
   const [cvPreview, setCvPreview] = useState(null);
+  const [errors, setErrors] = useState({});
   const inputRef = useRef(null);
   const suggestionsRef = useRef(null);
 
@@ -91,7 +92,59 @@ export default function ApplyPage() {
   }, [skillInput, formData.skills]);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    
+    // ✅ Phone number validation - only numbers allowed
+    if (name === 'phone') {
+      const numbersOnly = value.replace(/[^0-9]/g, '');
+      setFormData({ ...formData, [name]: numbersOnly });
+      // Clear error when user types
+      if (errors.phone) setErrors({ ...errors, phone: '' });
+    } else {
+      setFormData({ ...formData, [name]: value });
+      if (errors[name]) setErrors({ ...errors, [name]: '' });
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    
+    // ✅ Full Name - Required
+    if (!formData.fullName.trim()) {
+      newErrors.fullName = "Full name is required";
+    }
+    
+    // ✅ Email - Required + Valid format
+    if (!formData.email.trim()) {
+      newErrors.email = "Email address is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Please enter a valid email address";
+    }
+    
+    // ✅ Phone - Required + Only numbers + Min 10 digits
+    if (!formData.phone.trim()) {
+      newErrors.phone = "Phone number is required";
+    } else if (formData.phone.length < 10) {
+      newErrors.phone = "Phone number must be at least 10 digits";
+    }
+    
+    // ✅ City - Required
+    if (!formData.city.trim()) {
+      newErrors.city = "City is required";
+    }
+    
+    // ✅ Experience - Required
+    if (!formData.experience) {
+      newErrors.experience = "Experience is required";
+    }
+    
+    // ✅ CV File - Required
+    if (!cvFile) {
+      newErrors.cv = "CV is required";
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const addSkill = (skill) => {
@@ -132,13 +185,15 @@ export default function ApplyPage() {
       }
       setCvFile(file);
       setCvPreview(file.name);
+      if (errors.cv) setErrors({ ...errors, cv: '' });
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.fullName || !formData.email || !cvFile) {
-      toast.error("Please fill all required fields and upload CV");
+    
+    if (!validateForm()) {
+      toast.error("Please fill all required fields");
       return;
     }
 
@@ -222,7 +277,7 @@ export default function ApplyPage() {
             </div>
           </div>
 
-          {/* ✅ INFO MESSAGE - MOVED TO TOP */}
+          {/* Info Message */}
           <div className="bg-green-50 border border-green-200 rounded-lg p-3 mx-6 mt-6">
             <p className="text-sm text-green-700 flex items-center justify-center gap-2">
               <CheckCircle className="h-4 w-4" /> No account required. Your application will be sent directly to the employer.
@@ -245,11 +300,11 @@ export default function ApplyPage() {
                       name="fullName"
                       value={formData.fullName}
                       onChange={handleChange}
-                      className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                      className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent ${errors.fullName ? 'border-red-500' : 'border-gray-300'}`}
                       placeholder="Enter your full name"
-                      required
                     />
                   </div>
+                  {errors.fullName && <p className="text-red-500 text-xs mt-1">{errors.fullName}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -262,18 +317,20 @@ export default function ApplyPage() {
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
-                      className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500"
+                      className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-cyan-500 ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
                       placeholder="you@example.com"
-                      required
                     />
                   </div>
+                  {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                 </div>
               </div>
 
               {/* Row 2: Phone & City */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone Number</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <input
@@ -281,13 +338,16 @@ export default function ApplyPage() {
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
-                      className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500"
+                      className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-cyan-500 ${errors.phone ? 'border-red-500' : 'border-gray-300'}`}
                       placeholder="03XXXXXXXXX"
                     />
                   </div>
+                  {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">City</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    City <span className="text-red-500">*</span>
+                  </label>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <input
@@ -295,22 +355,25 @@ export default function ApplyPage() {
                       name="city"
                       value={formData.city}
                       onChange={handleChange}
-                      className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg"
+                      className={`w-full pl-10 pr-4 py-2.5 border rounded-lg ${errors.city ? 'border-red-500' : 'border-gray-300'}`}
                       placeholder="Karachi, Lahore, Islamabad..."
                     />
                   </div>
+                  {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city}</p>}
                 </div>
               </div>
 
               {/* Row 3: Experience & Skills */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Experience</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Experience <span className="text-red-500">*</span>
+                  </label>
                   <select
                     name="experience"
                     value={formData.experience}
                     onChange={handleChange}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 bg-white"
+                    className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-cyan-500 bg-white ${errors.experience ? 'border-red-500' : 'border-gray-300'}`}
                   >
                     <option value="">Select Experience</option>
                     <option value="Fresher">Fresher (No experience)</option>
@@ -319,12 +382,13 @@ export default function ApplyPage() {
                     <option value="5-7 years">5 - 7 years</option>
                     <option value="7+ years">7+ years</option>
                   </select>
+                  {errors.experience && <p className="text-red-500 text-xs mt-1">{errors.experience}</p>}
                 </div>
 
                 {/* Skills Field */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Skills</label>
-                  <div className="border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-cyan-500 focus-within:border-transparent p-2 bg-white">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Skills (Optional)</label>
+                  <div className={`border rounded-lg focus-within:ring-2 focus-within:ring-cyan-500 focus-within:border-transparent p-2 bg-white ${errors.skills ? 'border-red-500' : 'border-gray-300'}`}>
                     {formData.skills.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mb-2">
                         {formData.skills.map((skill, index) => (
@@ -358,13 +422,13 @@ export default function ApplyPage() {
                       )}
                     </div>
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">Press Enter to add skill</p>
+                  <p className="text-xs text-gray-400 mt-1">Press Enter to add skill (Optional)</p>
                 </div>
               </div>
 
               {/* Cover Letter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Cover Letter</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Cover Letter (Optional)</label>
                 <textarea
                   name="coverLetter"
                   value={formData.coverLetter}
@@ -377,29 +441,50 @@ export default function ApplyPage() {
 
               {/* CV Upload */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Upload CV <span className="text-red-500">*</span></label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-cyan-500 transition">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Upload CV <span className="text-red-500">*</span>
+                </label>
+                <div className={`border-2 border-dashed rounded-lg p-6 text-center hover:border-cyan-500 transition ${errors.cv ? 'border-red-500' : 'border-gray-300'}`}>
                   {cvPreview ? (
                     <div>
                       <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-2" />
                       <p className="text-sm text-gray-600 break-all">{cvPreview}</p>
-                      <button type="button" onClick={() => { setCvFile(null); setCvPreview(null); }} className="text-red-500 text-sm mt-2 hover:underline">Remove file</button>
+                      <button
+                        type="button"
+                        onClick={() => { setCvFile(null); setCvPreview(null); }}
+                        className="text-red-500 text-sm mt-2 hover:underline"
+                      >
+                        Remove file
+                      </button>
                     </div>
                   ) : (
                     <label className="cursor-pointer block">
                       <Upload className="h-10 w-10 text-gray-400 mx-auto mb-2" />
                       <p className="text-gray-500">Click to upload your CV/Resume</p>
                       <p className="text-xs text-gray-400 mt-1">PDF, DOC, DOCX (Max 5MB)</p>
-                      <input type="file" accept=".pdf,.doc,.docx" onChange={handleFileChange} className="hidden" required />
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
                     </label>
                   )}
                 </div>
+                {errors.cv && <p className="text-red-500 text-xs mt-1">{errors.cv}</p>}
               </div>
 
               {/* Submit Button */}
-              <button type="submit" disabled={submitting} className="w-full bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-700 hover:to-blue-800 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50 mt-2">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-700 hover:to-blue-800 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50 mt-2"
+              >
                 {submitting ? (
-                  <span className="flex items-center justify-center gap-2"><div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div> Submitting...</span>
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                    Submitting...
+                  </span>
                 ) : (
                   "Submit Application"
                 )}
