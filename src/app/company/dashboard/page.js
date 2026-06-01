@@ -65,7 +65,7 @@ export default function CompanyDashboard() {
 
   const prevAppCountRef = useRef(0);
 
-  // ✅ Format salary - replace $ with PKR
+ 
   const formatSalary = (salary) => {
     if (!salary) return "Negotiable";
     return salary.replace(/\$/g, 'PKR');
@@ -420,10 +420,10 @@ export default function CompanyDashboard() {
                         </span>
                       )}
                       {job.salary && (
-                        <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 text-xs px-3 py-1.5 rounded-lg font-medium">
-                          <DollarSign className="h-3 w-3" /> {formatSalary(job.salary)}
-                        </span>
-                      )}
+  <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 text-xs px-3 py-1.5 rounded-lg font-medium">
+    {formatSalary(job.salary)}
+  </span>
+)}
                     </div>
                     <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
@@ -509,9 +509,9 @@ export default function CompanyDashboard() {
                         <MapPin className="h-3 w-3" /> {job.location || "Pakistan"}
                       </span>
                       <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs">{job.type || "Full Time"}</span>
-                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                        <DollarSign className="h-3 w-3" /> {formatSalary(job.salary) || "Negotiable"}
-                      </span>
+                     <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold">
+  {formatSalary(job.salary) || "Negotiable"}
+</span>
                     </div>
                     <div className="flex justify-between text-sm text-gray-500 mb-4">
                       <span className="flex items-center gap-1"><Users className="h-4 w-4" /> {job.applicantsCount || 0} applicants</span>
