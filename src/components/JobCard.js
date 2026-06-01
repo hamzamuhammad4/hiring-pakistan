@@ -1,7 +1,7 @@
 // src/components/JobCard.js
 import Link from "next/link";
 import Image from "next/image";
-import { Briefcase, MapPin, DollarSign, Calendar, Building2, Clock, GraduationCap } from "lucide-react";
+import { Briefcase, MapPin, Calendar, Building2, Clock, GraduationCap } from "lucide-react";
 
 export default function JobCard({ job }) {
   const postedDate = job.createdAt
@@ -26,11 +26,12 @@ export default function JobCard({ job }) {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition duration-300">
-      <div className="p-4">
+    <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition duration-300 h-full flex flex-col">
+      <div className="p-4 flex-1 flex flex-col">
+        
         {/* Header with Logo */}
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm overflow-hidden border border-gray-100">
+          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm overflow-hidden border border-gray-100 flex-shrink-0">
             <Image 
               src="/logo.png" 
               alt="Hiring Pakistan" 
@@ -49,8 +50,8 @@ export default function JobCard({ job }) {
           </div>
         </div>
 
-        {/* Location, Type, Salary Badges */}
-        <div className="flex flex-wrap gap-1.5 mb-3">
+        {/* Location & Type Badges */}
+        <div className="flex flex-wrap gap-1.5 mb-2">
           {job.location && (
             <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded-lg text-xs flex items-center gap-1">
               <MapPin className="h-2.5 w-2.5" /> {job.location}
@@ -61,12 +62,16 @@ export default function JobCard({ job }) {
               <Briefcase className="h-2.5 w-2.5" /> {job.type}
             </span>
           )}
-          {job.salary && job.salary !== "Negotiable" && (
-            <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded-lg text-xs font-semibold flex items-center gap-1">
-              <DollarSign className="h-2.5 w-2.5" /> {formatSalary(job.salary.length > 30 ? job.salary.substring(0, 25) + "..." : job.salary)}
-            </span>
-          )}
         </div>
+
+        {/* ✅ Salary - Full width, next line, with PKR */}
+        {job.salary && job.salary !== "Negotiable" && (
+          <div className="mb-2">
+            <span className="text-xs font-semibold text-green-700 bg-green-50 px-2 py-1 rounded-lg inline-block break-words max-w-full">
+              {formatSalary(job.salary)}
+            </span>
+          </div>
+        )}
 
         {/* Experience & Qualification */}
         <div className="flex flex-wrap gap-2 mb-2 text-xs text-gray-500">
@@ -82,15 +87,13 @@ export default function JobCard({ job }) {
           )}
         </div>
 
-        {/* ❌ APPLICANTS COUNT - REMOVED */}
-
         {/* Description Preview - Limited to 80 chars */}
-        <p className="text-gray-600 text-xs mb-3">
+        <p className="text-gray-600 text-xs mb-3 flex-1">
           {getShortDescription(job.description)}
         </p>
 
         {/* Footer */}
-        <div className="flex justify-between items-center pt-2 border-t">
+        <div className="flex justify-between items-center pt-2 border-t mt-auto">
           <span className="text-xs text-gray-400 flex items-center gap-1">
             <Calendar className="h-3 w-3" /> {postedDate}
           </span>
