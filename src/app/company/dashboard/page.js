@@ -313,10 +313,12 @@ export default function CompanyDashboard() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 bg-white rounded-2xl shadow-lg p-6">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <Building2 className="h-8 w-8 text-cyan-600" />
-              <h1 className="text-4xl font-bold text-gray-800">Company Dashboard</h1>
-            </div>
-            <p className="text-gray-500">Welcome back, {auth.currentUser?.email}</p>
+  <Building2 className="h-8 w-8 text-cyan-600" />
+  <h1 className="text-4xl font-bold text-gray-800">
+    {companyData?.companyName || "Company"} Dashboard
+  </h1>
+</div>
+<p className="text-gray-500">Welcome back, {auth.currentUser?.email}</p>
             {auth.currentUser?.emailVerified && (
               <span className="inline-flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full mt-1">
                 <CheckCircle className="h-3 w-3" /> Verified
