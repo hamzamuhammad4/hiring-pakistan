@@ -1,10 +1,10 @@
 // src/app/company/post-job/page.js
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { db, auth } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp, doc, getDoc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import Link from "next/link";
 import toast from 'react-hot-toast';
 import { Briefcase, Building2, MapPin, DollarSign, Clock, ArrowLeft, AlertCircle } from "lucide-react";
@@ -12,7 +12,6 @@ import { Briefcase, Building2, MapPin, DollarSign, Clock, ArrowLeft, AlertCircle
 export default function PostJobPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [loadingCompany, setLoadingCompany] = useState(true);
   const [errors, setErrors] = useState({});
   
   const [formData, setFormData] = useState({
@@ -34,49 +33,9 @@ export default function PostJobPage() {
     vacancies: "",
   });
 
-  // Fetch company data when component mounts
-  useEffect(() => {
-    const fetchCompanyData = async () => {
-      try {
-        const user = auth.currentUser;
-        if (!user) {
-          router.push("/company/login");
-          return;
-        }
-
-        // Fetch company profile from Firestore
-        const companyDocRef = doc(db, "companies", user.uid);
-        const companyDoc = await getDoc(companyDocRef);
-        
-        if (companyDoc.exists()) {
-          const companyData = companyDoc.data();
-          setFormData(prev => ({
-            ...prev,
-            companyName: companyData.companyName || "",
-            contact: companyData.phone || "",
-          }));
-        } else {
-          // If no company profile found, redirect to complete profile
-          toast.error("Please complete your company profile first");
-          router.push("/company/profile");
-        }
-      } catch (error) {
-        console.error("Error fetching company data:", error);
-        toast.error("Failed to load company data");
-      } finally {
-        setLoadingCompany(false);
-      }
-    };
-
-    fetchCompanyData();
-  }, [router]);
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     let newValue = value;
-    
-    // Don't allow changes to companyName field
-    if (name === "companyName") return;
     
     // Number validation for numeric fields
     if (['salaryMin', 'salaryMax', 'experienceMin', 'experienceMax', 'vacancies'].includes(name)) {
@@ -197,17 +156,6 @@ export default function PostJobPage() {
   const salaryTypes = ["hourly", "daily", "weekly", "monthly", "yearly"];
   const shifts = ["Morning", "Evening", "Night", "Rotational", "Flexible"];
 
-  if (loadingCompany) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading company profile...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -247,21 +195,14 @@ export default function PostJobPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Company Name <span className="text-red-500">*</span>
                 </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    name="companyName"
-                    value={formData.companyName}
-                    onChange={handleChange}
-                    disabled
-                    className={`w-full px-4 py-3 border rounded-xl bg-gray-100 cursor-not-allowed ${errors.companyName ? 'border-red-500' : 'border-gray-300'}`}
-                    placeholder="Your Company Name"
-                  />
-                  <Building2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Company name is automatically fetched from your profile
-                </p>
+                <input
+                  type="text"
+                  name="companyName"
+                  value={formData.companyName}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-3 border rounded-xl ${errors.companyName ? 'border-red-500' : 'border-gray-300'}`}
+                  placeholder="Your Company Name"
+                />
                 {errors.companyName && <p className="text-red-500 text-xs mt-1">{errors.companyName}</p>}
               </div>
 
