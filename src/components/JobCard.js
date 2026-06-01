@@ -1,7 +1,7 @@
 // src/components/JobCard.js
 import Link from "next/link";
 import Image from "next/image";
-import { Briefcase, MapPin, Users, Calendar, Building2, Clock, GraduationCap } from "lucide-react";
+import { Briefcase, MapPin, DollarSign, Calendar, Building2, Clock, GraduationCap } from "lucide-react";
 
 export default function JobCard({ job }) {
   const postedDate = job.createdAt
@@ -12,24 +12,17 @@ export default function JobCard({ job }) {
       })
     : "Recent";
 
+  // Format salary - replace $ with PKR
   const formatSalary = (salary) => {
     if (!salary) return "Negotiable";
-    
-    // If salary already has PKR, return as is
-    if (typeof salary === 'string' && salary.includes('PKR')) {
-      return salary;
-    }
-    
-    // Convert string with $ to PKR
-    let formattedSalary = String(salary);
-    formattedSalary = formattedSalary.replace(/\$/g, 'PKR');
-    
-    // If no currency symbol was found, add PKR prefix
-    if (!formattedSalary.includes('PKR') && !formattedSalary.includes('Negotiable')) {
-      formattedSalary = `PKR ${formattedSalary}`;
-    }
-    
-    return formattedSalary;
+    return salary.replace(/\$/g, 'PKR');
+  };
+
+  // Limit description to 80 characters
+  const getShortDescription = (description) => {
+    if (!description) return "No description available";
+    if (description.length <= 80) return description;
+    return description.substring(0, 80) + "...";
   };
 
   return (
@@ -70,8 +63,7 @@ export default function JobCard({ job }) {
           )}
           {job.salary && job.salary !== "Negotiable" && (
             <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded-lg text-xs font-semibold flex items-center gap-1">
-              {/* DollarSign icon removed */}
-              {formatSalary(job.salary.length > 30 ? job.salary.substring(0, 25) + "..." : job.salary)}
+              <DollarSign className="h-2.5 w-2.5" /> {formatSalary(job.salary.length > 30 ? job.salary.substring(0, 25) + "..." : job.salary)}
             </span>
           )}
         </div>
@@ -90,16 +82,11 @@ export default function JobCard({ job }) {
           )}
         </div>
 
-        {/* Stats */}
-        <div className="flex justify-between text-sm text-gray-500 mb-2">
-          <span className="flex items-center gap-1 text-xs">
-            <Users className="h-3 w-3" /> {job.applicantsCount || 0} applicants
-          </span>
-        </div>
+        {/* ❌ APPLICANTS COUNT - REMOVED */}
 
-        {/* Description Preview */}
-        <p className="text-gray-600 text-xs line-clamp-2 mb-2">
-          {job.description?.substring(0, 80)}...
+        {/* Description Preview - Limited to 80 chars */}
+        <p className="text-gray-600 text-xs mb-3">
+          {getShortDescription(job.description)}
         </p>
 
         {/* Footer */}
