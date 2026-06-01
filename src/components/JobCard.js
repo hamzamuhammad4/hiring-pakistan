@@ -12,10 +12,14 @@ export default function JobCard({ job }) {
       })
     : "Recent";
 
-  // Format salary - replace $ with PKR
+  // ✅ Format salary - replace $ with PKR (keep the dollar sign icon removed)
   const formatSalary = (salary) => {
     if (!salary) return "Negotiable";
-    return salary.replace(/\$/g, 'PKR');
+    // Replace $ with PKR
+    let formatted = salary.replace(/\$/g, 'PKR');
+    // Also handle if there's space after $
+    formatted = formatted.replace(/\$\s/g, 'PKR ');
+    return formatted;
   };
 
   // Limit description to 80 characters
