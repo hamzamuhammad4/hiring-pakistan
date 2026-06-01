@@ -94,11 +94,9 @@ export default function ApplyPage() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     
-    // ✅ Phone number validation - only numbers allowed
     if (name === 'phone') {
       const numbersOnly = value.replace(/[^0-9]/g, '');
       setFormData({ ...formData, [name]: numbersOnly });
-      // Clear error when user types
       if (errors.phone) setErrors({ ...errors, phone: '' });
     } else {
       setFormData({ ...formData, [name]: value });
@@ -109,36 +107,34 @@ export default function ApplyPage() {
   const validateForm = () => {
     const newErrors = {};
     
-    // ✅ Full Name - Required
     if (!formData.fullName.trim()) {
       newErrors.fullName = "Full name is required";
     }
     
-    // ✅ Email - Required + Valid format
     if (!formData.email.trim()) {
       newErrors.email = "Email address is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Please enter a valid email address";
     }
     
-    // ✅ Phone - Required + Only numbers + Min 10 digits
     if (!formData.phone.trim()) {
       newErrors.phone = "Phone number is required";
     } else if (formData.phone.length < 10) {
       newErrors.phone = "Phone number must be at least 10 digits";
     }
     
-    // ✅ City - Required
     if (!formData.city.trim()) {
       newErrors.city = "City is required";
     }
     
-    // ✅ Experience - Required
     if (!formData.experience) {
       newErrors.experience = "Experience is required";
     }
     
-    // ✅ CV File - Required
+    if (formData.skills.length === 0) {
+      newErrors.skills = "At least one skill is required";
+    }
+    
     if (!cvFile) {
       newErrors.cv = "CV is required";
     }
@@ -147,17 +143,21 @@ export default function ApplyPage() {
     return Object.keys(newErrors).length === 0;
   };
 
+  // ✅ Add skill - Convert to UPPERCASE
   const addSkill = (skill) => {
-    const trimmedSkill = skill.trim();
-    if (trimmedSkill && !formData.skills.includes(trimmedSkill)) {
+    // Convert to uppercase
+    const upperCaseSkill = skill.trim().toUpperCase();
+    
+    if (upperCaseSkill && !formData.skills.includes(upperCaseSkill)) {
       setFormData(prev => ({
         ...prev,
-        skills: [...prev.skills, trimmedSkill]
+        skills: [...prev.skills, upperCaseSkill]
       }));
     }
     setSkillInput("");
     setShowSuggestions(false);
     inputRef.current?.focus();
+    if (errors.skills) setErrors({ ...errors, skills: '' });
   };
 
   const handleSkillKeyPress = (e) => {
@@ -300,7 +300,7 @@ export default function ApplyPage() {
                       name="fullName"
                       value={formData.fullName}
                       onChange={handleChange}
-                      className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent ${errors.fullName ? 'border-red-500' : 'border-gray-300'}`}
+                      className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-cyan-500 ${errors.fullName ? 'border-red-500' : 'border-gray-300'}`}
                       placeholder="Enter your full name"
                     />
                   </div>
@@ -385,14 +385,16 @@ export default function ApplyPage() {
                   {errors.experience && <p className="text-red-500 text-xs mt-1">{errors.experience}</p>}
                 </div>
 
-                {/* Skills Field */}
+                {/* Skills Field - Required */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Skills (Optional)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Skills <span className="text-red-500">*</span>
+                  </label>
                   <div className={`border rounded-lg focus-within:ring-2 focus-within:ring-cyan-500 focus-within:border-transparent p-2 bg-white ${errors.skills ? 'border-red-500' : 'border-gray-300'}`}>
                     {formData.skills.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mb-2">
                         {formData.skills.map((skill, index) => (
-                          <span key={index} className="inline-flex items-center gap-1 bg-cyan-100 text-cyan-800 px-2 py-1 rounded-md text-sm">
+                          <span key={index} className="inline-flex items-center gap-1 bg-cyan-100 text-cyan-800 px-2 py-1 rounded-md text-sm font-medium uppercase">
                             {skill}
                             <button type="button" onClick={() => removeSkill(skill)} className="hover:text-red-600">
                               <X className="h-3 w-3" />
@@ -408,7 +410,7 @@ export default function ApplyPage() {
                         value={skillInput}
                         onChange={(e) => setSkillInput(e.target.value)}
                         onKeyDown={handleSkillKeyPress}
-                        placeholder={formData.skills.length === 0 ? "Type a skill and press Enter..." : "Add more skills..."}
+                        placeholder={formData.skills.length === 0 ? "Type a skill and press Enter (e.g., JavaScript)..." : "Add more skills..."}
                         className="w-full px-2 py-1 outline-none text-sm"
                       />
                       {showSuggestions && suggestions.length > 0 && (
@@ -422,11 +424,12 @@ export default function ApplyPage() {
                       )}
                     </div>
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">Press Enter to add skill (Optional)</p>
+                  {errors.skills && <p className="text-red-500 text-xs mt-1">{errors.skills}</p>}
+                  <p className="text-xs text-gray-400 mt-1">Press Enter to add skill (Required)</p>
                 </div>
               </div>
 
-              {/* Cover Letter */}
+              {/* Cover Letter - Optional */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Cover Letter (Optional)</label>
                 <textarea
