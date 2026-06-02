@@ -134,14 +134,14 @@ export default function PostJobPage() {
         return;
       }
 
-      // Format salary
+      // Format salary with PKR
       let salaryDisplay = "Negotiable";
       if (formData.salaryMin && formData.salaryMax) {
-        salaryDisplay = `${formData.salaryMin.toLocaleString()} - ${formData.salaryMax.toLocaleString()} / ${formData.salaryType}`;
+        salaryDisplay = `PKR ${formData.salaryMin.toLocaleString()} - ${formData.salaryMax.toLocaleString()} / ${formData.salaryType}`;
       } else if (formData.salaryMin) {
-        salaryDisplay = `From ${formData.salaryMin.toLocaleString()} / ${formData.salaryType}`;
+        salaryDisplay = `From PKR ${formData.salaryMin.toLocaleString()} / ${formData.salaryType}`;
       } else if (formData.salaryMax) {
-        salaryDisplay = `Up to ${formData.salaryMax.toLocaleString()} / ${formData.salaryType}`;
+        salaryDisplay = `Up to PKR ${formData.salaryMax.toLocaleString()} / ${formData.salaryType}`;
       }
 
       // Format experience
@@ -302,7 +302,7 @@ export default function PostJobPage() {
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Minimum Salary</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Minimum Salary (PKR)</label>
                   <input
                     type="text"
                     name="salaryMin"
@@ -313,7 +313,7 @@ export default function PostJobPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Maximum Salary</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Maximum Salary (PKR)</label>
                   <input
                     type="text"
                     name="salaryMax"
