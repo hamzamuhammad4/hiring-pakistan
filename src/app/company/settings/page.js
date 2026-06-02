@@ -6,16 +6,22 @@
 import { useState, useEffect } from "react";
 import { db, auth } from "@/lib/firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { updatePassword, updateEmail, sendEmailVerification } from "firebase/auth";
+import { updatePassword, updateEmail, sendEmailVerification, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import toast from 'react-hot-toast';
+import { Eye, EyeOff, Lock, Mail, Building2, Phone, Globe, MapPin, Linkedin, Facebook, Twitter } from "lucide-react";
 
 export default function SettingsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
+  
+  // Password visibility states
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   // Company Data
   const [companyData, setCompanyData] = useState({
@@ -51,6 +57,8 @@ export default function SettingsPage() {
     new: '',
     confirm: ''
   });
+  
+  const [passwordErrors, setPasswordErrors] = useState({});
 
   // Industries List
   const industries = [
@@ -126,14 +134,32 @@ export default function SettingsPage() {
       const companyRef = doc(db, "companies", user.uid);
       
       await updateDoc(companyRef, {
-        ...companyData,
+        companyName: companyData.companyName,
+        phone: companyData.phone,
+        website: companyData.website,
+        address: companyData.address,
+        city: companyData.city,
+        industry: companyData.industry,
+        size: companyData.size,
+        description: companyData.description,
+        socialMedia: companyData.socialMedia,
         updatedAt: new Date()
       });
 
       // Update email in Firebase Auth if changed
       if (companyData.email !== user.email) {
-        await updateEmail(user, companyData.email);
-        toast.success("Verification email sent to new address");
+        try {
+          await updateEmail(user, companyData.email);
+          await sendEmailVerification(user);
+          toast.success("Verification email sent to new address");
+        } catch (emailError) {
+          console.error("Email update error:", emailError);
+          if (emailError.code === 'auth/requires-recent-login') {
+            toast.error("Please log out and log in again to change email");
+          } else {
+            toast.error("Failed to update email: " + emailError.message);
+          }
+        }
       }
 
       toast.success("Profile updated successfully!");
@@ -145,17 +171,31 @@ export default function SettingsPage() {
     }
   };
 
-  // Handle password change
+  // Handle password change with reauthentication
   const handlePasswordChange = async (e) => {
     e.preventDefault();
-
-    if (passwords.new !== passwords.confirm) {
-      toast.error("New passwords don't match");
-      return;
+    
+    // Clear previous errors
+    setPasswordErrors({});
+    
+    // Validate passwords
+    const errors = {};
+    if (!passwords.current) {
+      errors.current = "Current password is required";
     }
-
-    if (passwords.new.length < 6) {
-      toast.error("Password must be at least 6 characters");
+    if (!passwords.new) {
+      errors.new = "New password is required";
+    } else if (passwords.new.length < 6) {
+      errors.new = "Password must be at least 6 characters";
+    }
+    if (!passwords.confirm) {
+      errors.confirm = "Please confirm your new password";
+    } else if (passwords.new !== passwords.confirm) {
+      errors.confirm = "New passwords don't match";
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setPasswordErrors(errors);
       return;
     }
 
@@ -163,13 +203,40 @@ export default function SettingsPage() {
 
     try {
       const user = auth.currentUser;
+      
+      // Reauthenticate user before changing password
+      const credential = EmailAuthProvider.credential(
+        user.email,
+        passwords.current
+      );
+      
+      await reauthenticateWithCredential(user, credential);
+      
+      // Update password
       await updatePassword(user, passwords.new);
       
       setPasswords({ current: '', new: '', confirm: '' });
+      setPasswordErrors({});
       toast.success("Password updated successfully!");
+      
     } catch (error) {
       console.error("Error changing password:", error);
-      toast.error(error.message || "Failed to change password");
+      
+      // Handle specific Firebase auth errors
+      switch (error.code) {
+        case 'auth/wrong-password':
+          setPasswordErrors({ current: "Current password is incorrect" });
+          toast.error("Current password is incorrect");
+          break;
+        case 'auth/too-many-requests':
+          toast.error("Too many failed attempts. Please try again later");
+          break;
+        case 'auth/requires-recent-login':
+          toast.error("Please log out and log in again to change password");
+          break;
+        default:
+          toast.error(error.message || "Failed to change password");
+      }
     } finally {
       setSaving(false);
     }
@@ -298,53 +365,65 @@ export default function SettingsPage() {
                 {/* Company Name */}
                 <div>
                   <label className="block text-sm font-medium mb-2">Company Name *</label>
-                  <input
-                    type="text"
-                    name="companyName"
-                    value={companyData.companyName}
-                    onChange={handleInputChange}
-                    className="w-full border rounded-lg px-4 py-3 focus:ring-2 focus:ring-cyan-500"
-                    required
-                  />
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      type="text"
+                      name="companyName"
+                      value={companyData.companyName}
+                      onChange={handleInputChange}
+                      className="w-full border rounded-lg pl-10 pr-4 py-3 focus:ring-2 focus:ring-cyan-500"
+                      required
+                    />
+                  </div>
                 </div>
 
                 {/* Email */}
                 <div>
                   <label className="block text-sm font-medium mb-2">Email Address *</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={companyData.email}
-                    onChange={handleInputChange}
-                    className="w-full border rounded-lg px-4 py-3 focus:ring-2 focus:ring-cyan-500"
-                    required
-                  />
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      type="email"
+                      name="email"
+                      value={companyData.email}
+                      onChange={handleInputChange}
+                      className="w-full border rounded-lg pl-10 pr-4 py-3 focus:ring-2 focus:ring-cyan-500"
+                      required
+                    />
+                  </div>
                 </div>
 
                 {/* Phone */}
                 <div>
                   <label className="block text-sm font-medium mb-2">Phone Number</label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={companyData.phone}
-                    onChange={handleInputChange}
-                    placeholder="+92 XXX XXXXXXX"
-                    className="w-full border rounded-lg px-4 py-3 focus:ring-2 focus:ring-cyan-500"
-                  />
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={companyData.phone}
+                      onChange={handleInputChange}
+                      placeholder="+92 XXX XXXXXXX"
+                      className="w-full border rounded-lg pl-10 pr-4 py-3 focus:ring-2 focus:ring-cyan-500"
+                    />
+                  </div>
                 </div>
 
                 {/* Website */}
                 <div>
                   <label className="block text-sm font-medium mb-2">Website</label>
-                  <input
-                    type="url"
-                    name="website"
-                    value={companyData.website}
-                    onChange={handleInputChange}
-                    placeholder="https://example.com"
-                    className="w-full border rounded-lg px-4 py-3 focus:ring-2 focus:ring-cyan-500"
-                  />
+                  <div className="relative">
+                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      type="url"
+                      name="website"
+                      value={companyData.website}
+                      onChange={handleInputChange}
+                      placeholder="https://example.com"
+                      className="w-full border rounded-lg pl-10 pr-4 py-3 focus:ring-2 focus:ring-cyan-500"
+                    />
+                  </div>
                 </div>
 
                 {/* Industry */}
@@ -381,14 +460,17 @@ export default function SettingsPage() {
                 {/* City */}
                 <div>
                   <label className="block text-sm font-medium mb-2">City</label>
-                  <input
-                    type="text"
-                    name="city"
-                    value={companyData.city}
-                    onChange={handleInputChange}
-                    placeholder="Karachi, Lahore, Islamabad..."
-                    className="w-full border rounded-lg px-4 py-3 focus:ring-2 focus:ring-cyan-500"
-                  />
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      type="text"
+                      name="city"
+                      value={companyData.city}
+                      onChange={handleInputChange}
+                      placeholder="Karachi, Lahore, Islamabad..."
+                      className="w-full border rounded-lg pl-10 pr-4 py-3 focus:ring-2 focus:ring-cyan-500"
+                    />
+                  </div>
                 </div>
 
                 {/* Address */}
@@ -422,33 +504,42 @@ export default function SettingsPage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium mb-2">LinkedIn</label>
-                      <input
-                        type="url"
-                        value={companyData.socialMedia.linkedin}
-                        onChange={(e) => handleSocialChange('linkedin', e.target.value)}
-                        placeholder="https://linkedin.com/company/..."
-                        className="w-full border rounded-lg px-4 py-2"
-                      />
+                      <div className="relative">
+                        <Linkedin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-blue-600" />
+                        <input
+                          type="url"
+                          value={companyData.socialMedia.linkedin}
+                          onChange={(e) => handleSocialChange('linkedin', e.target.value)}
+                          placeholder="https://linkedin.com/company/..."
+                          className="w-full border rounded-lg pl-10 pr-4 py-2"
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-2">Facebook</label>
-                      <input
-                        type="url"
-                        value={companyData.socialMedia.facebook}
-                        onChange={(e) => handleSocialChange('facebook', e.target.value)}
-                        placeholder="https://facebook.com/..."
-                        className="w-full border rounded-lg px-4 py-2"
-                      />
+                      <div className="relative">
+                        <Facebook className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-blue-600" />
+                        <input
+                          type="url"
+                          value={companyData.socialMedia.facebook}
+                          onChange={(e) => handleSocialChange('facebook', e.target.value)}
+                          placeholder="https://facebook.com/..."
+                          className="w-full border rounded-lg pl-10 pr-4 py-2"
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-2">Twitter</label>
-                      <input
-                        type="url"
-                        value={companyData.socialMedia.twitter}
-                        onChange={(e) => handleSocialChange('twitter', e.target.value)}
-                        placeholder="https://twitter.com/..."
-                        className="w-full border rounded-lg px-4 py-2"
-                      />
+                      <div className="relative">
+                        <Twitter className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-blue-400" />
+                        <input
+                          type="url"
+                          value={companyData.socialMedia.twitter}
+                          onChange={(e) => handleSocialChange('twitter', e.target.value)}
+                          placeholder="https://twitter.com/..."
+                          className="w-full border rounded-lg pl-10 pr-4 py-2"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -552,45 +643,94 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Security Tab */}
+          {/* Security Tab - Fixed with eye icons and reauthentication */}
           {activeTab === 'security' && (
             <div className="space-y-8">
               <div>
                 <h2 className="text-2xl font-bold mb-6">Change Password</h2>
                 
                 <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
+                  {/* Current Password */}
                   <div>
                     <label className="block text-sm font-medium mb-2">Current Password</label>
-                    <input
-                      type="password"
-                      value={passwords.current}
-                      onChange={(e) => setPasswords({...passwords, current: e.target.value})}
-                      className="w-full border rounded-lg px-4 py-3 focus:ring-2 focus:ring-cyan-500"
-                      required
-                    />
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                      <input
+                        type={showCurrentPassword ? "text" : "password"}
+                        value={passwords.current}
+                        onChange={(e) => setPasswords({...passwords, current: e.target.value})}
+                        className={`w-full border rounded-lg pl-10 pr-12 py-3 focus:ring-2 focus:ring-cyan-500 ${
+                          passwordErrors.current ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      >
+                        {showCurrentPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+                    {passwordErrors.current && (
+                      <p className="text-red-500 text-sm mt-1">{passwordErrors.current}</p>
+                    )}
                   </div>
 
+                  {/* New Password */}
                   <div>
                     <label className="block text-sm font-medium mb-2">New Password</label>
-                    <input
-                      type="password"
-                      value={passwords.new}
-                      onChange={(e) => setPasswords({...passwords, new: e.target.value})}
-                      className="w-full border rounded-lg px-4 py-3 focus:ring-2 focus:ring-cyan-500"
-                      required
-                      minLength="6"
-                    />
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                      <input
+                        type={showNewPassword ? "text" : "password"}
+                        value={passwords.new}
+                        onChange={(e) => setPasswords({...passwords, new: e.target.value})}
+                        className={`w-full border rounded-lg pl-10 pr-12 py-3 focus:ring-2 focus:ring-cyan-500 ${
+                          passwordErrors.new ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        required
+                        minLength="6"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      >
+                        {showNewPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+                    {passwordErrors.new && (
+                      <p className="text-red-500 text-sm mt-1">{passwordErrors.new}</p>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">Password must be at least 6 characters</p>
                   </div>
 
+                  {/* Confirm New Password */}
                   <div>
                     <label className="block text-sm font-medium mb-2">Confirm New Password</label>
-                    <input
-                      type="password"
-                      value={passwords.confirm}
-                      onChange={(e) => setPasswords({...passwords, confirm: e.target.value})}
-                      className="w-full border rounded-lg px-4 py-3 focus:ring-2 focus:ring-cyan-500"
-                      required
-                    />
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={passwords.confirm}
+                        onChange={(e) => setPasswords({...passwords, confirm: e.target.value})}
+                        className={`w-full border rounded-lg pl-10 pr-12 py-3 focus:ring-2 focus:ring-cyan-500 ${
+                          passwordErrors.confirm ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+                    {passwordErrors.confirm && (
+                      <p className="text-red-500 text-sm mt-1">{passwordErrors.confirm}</p>
+                    )}
                   </div>
 
                   <button
