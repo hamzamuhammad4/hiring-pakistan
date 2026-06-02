@@ -1,4 +1,4 @@
-// src/app/admin/blogs/edit/[id]/page.js
+// src/app/admin/blogs/[id]/edit/page.js
 "use client";
 
 import { useState, useEffect } from "react";
@@ -11,7 +11,9 @@ import { ArrowLeft, Upload, Save, X, Trash2 } from "lucide-react";
 
 export default function EditBlog() {
   const router = useRouter();
-  const { id } = useParams();
+  const params = useParams();
+  const id = params.id; // This gets the ID from the [id] folder
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -33,6 +35,12 @@ export default function EditBlog() {
   useEffect(() => {
     const fetchBlog = async () => {
       try {
+        if (!id) {
+          toast.error("Invalid blog ID");
+          router.push("/admin/blogs");
+          return;
+        }
+        
         const blogRef = doc(db, "blogs", id);
         const blogSnap = await getDoc(blogRef);
         
@@ -60,9 +68,7 @@ export default function EditBlog() {
       }
     };
 
-    if (id) {
-      fetchBlog();
-    }
+    fetchBlog();
   }, [id, router]);
 
   const handleChange = (e) => {
@@ -187,7 +193,8 @@ export default function EditBlog() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"></div>
+        <p className="text-gray-600 mt-4">Loading blog data...</p>
       </div>
     );
   }
