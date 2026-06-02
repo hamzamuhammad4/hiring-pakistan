@@ -81,7 +81,7 @@ export default function ApplicantsPage() {
     }
   };
 
-  // CV View with credit deduction
+  // CV View with credit deduction (only once per application)
   const handleViewCV = async (application) => {
     const cvUrl = application.cvUrl || application.cv;
     
@@ -90,7 +90,14 @@ export default function ApplicantsPage() {
       return;
     }
 
-    // Check credits
+    // Check if CV was already viewed
+    if (application.cvViewed) {
+      // Already viewed, just open without deducting credits
+      window.open(cvUrl, '_blank');
+      return;
+    }
+
+    // Check credits only for first time viewing
     if (companyCredits < 1) {
       toast.error((t) => (
         <div className="flex flex-col gap-2">
@@ -119,13 +126,29 @@ export default function ApplicantsPage() {
     try {
       const user = auth.currentUser;
       const companyRef = doc(db, "companies", user.uid);
+      const applicationRef = doc(db, "applications", application.id);
       
-      // Deduct 1 credit
+      // Deduct 1 credit and mark CV as viewed in a single transaction
       await updateDoc(companyRef, {
         credits: increment(-1)
       });
       
+      // Mark CV as viewed so credit won't be deducted again
+      await updateDoc(applicationRef, {
+        cvViewed: true,
+        cvViewedAt: new Date()
+      });
+      
+      // Update local state
       setCompanyCredits(prev => prev - 1);
+      setApplications(prevApps => 
+        prevApps.map(app => 
+          app.id === application.id 
+            ? { ...app, cvViewed: true, cvViewedAt: new Date() }
+            : app
+        )
+      );
+      
       toast.success(`1 credit deducted. Remaining credits: ${companyCredits - 1}`);
       window.open(cvUrl, '_blank');
       
@@ -181,12 +204,12 @@ export default function ApplicantsPage() {
             </span>
           </div>
           
-          {/* ✅ Only show warning when credits = 0 */}
+          {/* Show warning when credits = 0 */}
           {companyCredits === 0 && (
             <div className="mt-4 bg-red-50 border border-red-200 rounded-xl p-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <AlertCircle className="h-5 w-5 text-red-600" />
-                <span className="text-sm text-red-800 font-medium">No credits available! Buy credits to view CVs.</span>
+                <span className="text-sm text-red-800 font-medium">No credits available! Buy credits to view new CVs.</span>
               </div>
               <Link href="/company/funds" className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700">
                 Buy Credits
@@ -211,8 +234,6 @@ export default function ApplicantsPage() {
                       </div>
                       <div>
                         <h3 className="text-xl font-bold text-gray-800">{app.fullName || app.name}</h3>
-                        {/* ✅ Email, Phone, City - REMOVED */}
-                        {/* Only Cover Letter shows now */}
                         {app.coverLetter && (
                           <p className="mt-2 text-gray-600 text-sm bg-gray-50 p-2 rounded">
                             <strong>Cover Letter:</strong> {app.coverLetter}
@@ -232,6 +253,12 @@ export default function ApplicantsPage() {
                             ))}
                           </div>
                         )}
+                        {/* Show CV viewed status badge */}
+                        {app.cvViewed && (
+                          <span className="inline-flex items-center gap-1 mt-2 text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                            <Eye className="h-3 w-3" /> CV Viewed on {app.cvViewedAt?.toDate?.()?.toLocaleDateString() || 'earlier'}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -248,14 +275,16 @@ export default function ApplicantsPage() {
                       <option value="rejected">❌ Rejected</option>
                     </select>
 
-                    {/* CV Button */}
+                    {/* CV Button - Changes after viewing */}
                     <button
                       onClick={() => handleViewCV(app)}
-                      disabled={companyCredits < 1 || viewingCV === app.id}
+                      disabled={(companyCredits < 1 && !app.cvViewed) || viewingCV === app.id}
                       className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
-                        companyCredits < 1 
-                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          : 'bg-purple-600 hover:bg-purple-700 text-white'
+                        app.cvViewed 
+                          ? 'bg-green-600 hover:bg-green-700 text-white'
+                          : (companyCredits < 1 
+                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                              : 'bg-purple-600 hover:bg-purple-700 text-white')
                       }`}
                     >
                       {viewingCV === app.id ? (
@@ -263,7 +292,12 @@ export default function ApplicantsPage() {
                       ) : (
                         <Eye className="h-4 w-4" />
                       )}
-                      {viewingCV === app.id ? 'Opening...' : (companyCredits >= 1 ? `View CV (1 credit)` : 'No Credits')}
+                      {viewingCV === app.id 
+                        ? 'Opening...' 
+                        : (app.cvViewed 
+                            ? 'View CV (Free)' 
+                            : (companyCredits >= 1 ? 'View CV (1 credit)' : 'No Credits'))
+                      }
                     </button>
 
                     <span className={`inline-block px-2 py-1 rounded-full text-xs text-center ${getStatusBadge(app.status)}`}>
