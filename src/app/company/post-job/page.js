@@ -78,6 +78,15 @@ export default function PostJobPage() {
     // Don't allow changes to companyName field
     if (name === "companyName") return;
     
+    // For contact field - only allow numbers
+    if (name === "contact") {
+      // Remove any non-digit characters
+      const numbersOnly = value.replace(/\D/g, '');
+      newValue = numbersOnly;
+      setFormData(prev => ({ ...prev, [name]: newValue }));
+      return;
+    }
+    
     // Number validation for numeric fields
     if (['salaryMin', 'salaryMax', 'experienceMin', 'experienceMax', 'vacancies'].includes(name)) {
       if (value && isNaN(value)) {
@@ -111,6 +120,11 @@ export default function PostJobPage() {
     }
     if (!formData.description.trim()) newErrors.description = "Job description is required";
     if (!formData.requirements.trim()) newErrors.requirements = "Requirements are required";
+    
+    // Validate contact number if provided
+    if (formData.contact && formData.contact.length < 10) {
+      newErrors.contact = "Please enter a valid phone number (at least 10 digits)";
+    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -411,9 +425,12 @@ export default function PostJobPage() {
                   name="contact"
                   value={formData.contact}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl"
+                  className={`w-full px-4 py-3 border rounded-xl ${errors.contact ? 'border-red-500' : 'border-gray-300'}`}
                   placeholder="03XXXXXXXXX"
+                  maxLength="15"
                 />
+                {errors.contact && <p className="text-red-500 text-xs mt-1">{errors.contact}</p>}
+                <p className="text-xs text-gray-500 mt-1">Only numbers allowed (e.g., 03001234567)</p>
               </div>
             </div>
 
