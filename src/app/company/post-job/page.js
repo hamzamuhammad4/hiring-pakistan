@@ -1,4 +1,4 @@
-// src/app/company/post-job/page.js
+// src/app/company/post-job/page.js - FULL UPDATED CODE
 "use client";
 
 import { useState, useEffect } from "react";
@@ -8,6 +8,41 @@ import { collection, addDoc, serverTimestamp, doc, getDoc } from "firebase/fires
 import Link from "next/link";
 import toast from 'react-hot-toast';
 import { Briefcase, Building2, MapPin, DollarSign, Clock, ArrowLeft, AlertCircle } from "lucide-react";
+
+// Qualifications List - Pakistan Based
+const qualifications = [
+  "Matriculation (10th)",
+  "Intermediate (12th/FSc/FA/ICS)",
+  "Bachelor's (14 years)",
+  "Bachelor of Arts (BA)",
+  "Bachelor of Science (BSc)",
+  "Bachelor of Commerce (BCom)",
+  "Bachelor of Business Administration (BBA)",
+  "Bachelor of Computer Science (BCS)",
+  "Bachelor of Information Technology (BIT)",
+  "Bachelor of Engineering (BE)",
+  "Bachelor of Technology (BTech)",
+  "Master's (16 years)",
+  "Master of Arts (MA)",
+  "Master of Science (MSc)",
+  "Master of Commerce (MCom)",
+  "Master of Business Administration (MBA)",
+  "Master of Computer Science (MCS)",
+  "Master of Information Technology (MIT)",
+  "Master of Engineering (ME)",
+  "Master of Technology (MTech)",
+  "MS/ M.Phil",
+  "PhD/ Doctorate",
+  "Diploma (2 years)",
+  "Diploma of Associate Engineering (DAE)",
+  "Certificate",
+  "Short Course",
+  "Other"
+];
+
+const jobTypes = ["Full Time", "Part Time", "Contract", "Internship", "Remote"];
+const salaryTypes = ["hourly", "daily", "weekly", "monthly", "yearly"];
+const shifts = ["Morning", "Evening", "Night", "Rotational", "Flexible"];
 
 export default function PostJobPage() {
   const router = useRouter();
@@ -29,7 +64,7 @@ export default function PostJobPage() {
     contact: "",
     experienceMin: "",
     experienceMax: "",
-    qualification: "",
+    qualification: "", // Changed to empty string for dropdown
     shift: "Morning",
     vacancies: "",
   });
@@ -44,7 +79,6 @@ export default function PostJobPage() {
           return;
         }
 
-        // Fetch company profile from Firestore
         const companyDocRef = doc(db, "companies", user.uid);
         const companyDoc = await getDoc(companyDocRef);
         
@@ -56,7 +90,6 @@ export default function PostJobPage() {
             contact: companyData.phone || "",
           }));
         } else {
-          // If no company profile found, redirect to complete profile
           toast.error("Please complete your company profile first");
           router.push("/company/profile");
         }
@@ -75,19 +108,15 @@ export default function PostJobPage() {
     const { name, value } = e.target;
     let newValue = value;
     
-    // Don't allow changes to companyName field
     if (name === "companyName") return;
     
-    // For contact field - only allow numbers
     if (name === "contact") {
-      // Remove any non-digit characters
       const numbersOnly = value.replace(/\D/g, '');
       newValue = numbersOnly;
       setFormData(prev => ({ ...prev, [name]: newValue }));
       return;
     }
     
-    // Number validation for numeric fields
     if (['salaryMin', 'salaryMax', 'experienceMin', 'experienceMax', 'vacancies'].includes(name)) {
       if (value && isNaN(value)) {
         setErrors(prev => ({ ...prev, [name]: "Only numbers allowed" }));
@@ -110,6 +139,7 @@ export default function PostJobPage() {
     if (!formData.companyName.trim()) newErrors.companyName = "Company name is required";
     if (!formData.location.trim()) newErrors.location = "Location is required";
     if (!formData.type) newErrors.type = "Job type is required";
+    if (!formData.qualification) newErrors.qualification = "Please select a qualification";
     if (!formData.salaryMin && !formData.salaryMax) {
       newErrors.salary = "Salary range is required";
     }
@@ -121,7 +151,6 @@ export default function PostJobPage() {
     if (!formData.description.trim()) newErrors.description = "Job description is required";
     if (!formData.requirements.trim()) newErrors.requirements = "Requirements are required";
     
-    // Validate contact number if provided
     if (formData.contact && formData.contact.length < 10) {
       newErrors.contact = "Please enter a valid phone number (at least 10 digits)";
     }
@@ -148,7 +177,6 @@ export default function PostJobPage() {
         return;
       }
 
-      // Format salary with PKR
       let salaryDisplay = "Negotiable";
       if (formData.salaryMin && formData.salaryMax) {
         salaryDisplay = `PKR ${formData.salaryMin.toLocaleString()} - ${formData.salaryMax.toLocaleString()} / ${formData.salaryType}`;
@@ -158,7 +186,6 @@ export default function PostJobPage() {
         salaryDisplay = `Up to PKR ${formData.salaryMax.toLocaleString()} / ${formData.salaryType}`;
       }
 
-      // Format experience
       let experienceDisplay = "Not specified";
       if (formData.experienceMin && formData.experienceMax) {
         experienceDisplay = `${formData.experienceMin} - ${formData.experienceMax} years`;
@@ -206,10 +233,6 @@ export default function PostJobPage() {
       setLoading(false);
     }
   };
-
-  const jobTypes = ["Full Time", "Part Time", "Contract", "Internship", "Remote"];
-  const salaryTypes = ["hourly", "daily", "weekly", "monthly", "yearly"];
-  const shifts = ["Morning", "Evening", "Night", "Rotational", "Flexible"];
 
   if (loadingCompany) {
     return (
@@ -268,15 +291,11 @@ export default function PostJobPage() {
                     value={formData.companyName}
                     onChange={handleChange}
                     disabled
-                    className={`w-full px-4 py-3 border rounded-xl bg-gray-100 cursor-not-allowed ${errors.companyName ? 'border-red-500' : 'border-gray-300'}`}
-                    placeholder="Your Company Name"
+                    className="w-full px-4 py-3 border rounded-xl bg-gray-100 cursor-not-allowed border-gray-300"
                   />
                   <Building2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Company name is automatically fetched from your profile
-                </p>
-                {errors.companyName && <p className="text-red-500 text-xs mt-1">{errors.companyName}</p>}
+                <p className="text-xs text-gray-500 mt-1">Company name is automatically fetched from your profile</p>
               </div>
 
               <div>
@@ -385,17 +404,29 @@ export default function PostJobPage() {
 
             {/* Additional Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* ✅ UPDATED: Qualification as Dropdown */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Qualification</label>
-                <input
-                  type="text"
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Qualification <span className="text-red-500">*</span>
+                </label>
+                <select
                   name="qualification"
                   value={formData.qualification}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl"
-                  placeholder="e.g., Bachelor's in Computer Science"
-                />
+                  required
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-cyan-500 ${errors.qualification ? 'border-red-500' : 'border-gray-300'}`}
+                >
+                  <option value="">Select Qualification</option>
+                  {qualifications.map((qual) => (
+                    <option key={qual} value={qual}>
+                      {qual}
+                    </option>
+                  ))}
+                </select>
+                {errors.qualification && <p className="text-red-500 text-xs mt-1">{errors.qualification}</p>}
+                <p className="text-xs text-gray-500 mt-1">Select the minimum required qualification</p>
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Shift</label>
                 <select
@@ -407,6 +438,7 @@ export default function PostJobPage() {
                   {shifts.map(shift => <option key={shift} value={shift}>{shift}</option>)}
                 </select>
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Number of Vacancies</label>
                 <input
@@ -418,6 +450,7 @@ export default function PostJobPage() {
                   placeholder="e.g., 5"
                 />
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Contact Number (for CVs)</label>
                 <input
