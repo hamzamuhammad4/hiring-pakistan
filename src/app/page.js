@@ -1,14 +1,13 @@
-// src/app/page.js
+// src/app/page.js (debug version with direct auth check)
 "use client";
 
 import JobCard from "@/components/JobCard";
 import SearchSection from "@/components/SearchSection";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase"; // ✅ auth bhi import karo
 import { collection, query, orderBy, limit, getDocs, where } from "firebase/firestore";
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useAuth } from "@/lib/useAuth"; // ✅ Import auth hook
 
 // Fetch jobs function
 async function getAllJobs() {
@@ -30,20 +29,40 @@ async function getAllJobs() {
   }
 }
 
-// Main content component that uses searchParams
+// Main content component
 function HomeContent() {
-  const { user, role } = useAuth(); // ✅ Get auth state
   const searchParams = useSearchParams();
   const [allJobs, setAllJobs] = useState([]);
   const [filteredJobs, setFilteredJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isCompanyLoggedIn, setIsCompanyLoggedIn] = useState(false); // ✅ Direct state
 
   // Get filters from URL
   const searchQuery = searchParams.get('search') || "";
   const categoryFilter = searchParams.get('category') || "All";
 
-  // ✅ Check if company is logged in
-  const isCompanyLoggedIn = user && role === "company" && user.emailVerified === true;
+  // ✅ Direct Firebase auth check - MOST RELIABLE
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      console.log("Auth state changed:", user?.email, "Verified:", user?.emailVerified);
+      
+      if (user && user.emailVerified) {
+        // Check if user is company from Firestore
+        const userDoc = await import('firebase/firestore').then(({ doc, getDoc }) => 
+          getDoc(doc(db, 'users', user.uid))
+        );
+        const role = userDoc.exists() ? userDoc.data().role : null;
+        console.log("User role from DB:", role);
+        
+        // ✅ Condition: logged in AND role is company
+        setIsCompanyLoggedIn(role === "company" || role === "employer");
+      } else {
+        setIsCompanyLoggedIn(false);
+      }
+    });
+    
+    return unsubscribe;
+  }, []);
 
   // Load jobs
   useEffect(() => {
@@ -63,12 +82,10 @@ function HomeContent() {
     
     let results = [...allJobs];
     
-    // Filter by category
     if (categoryFilter !== "All") {
       results = results.filter(job => job.category === categoryFilter);
     }
     
-    // Filter by search term
     if (searchQuery.trim() !== "") {
       const term = searchQuery.toLowerCase().trim();
       results = results.filter(job => 
@@ -91,11 +108,9 @@ function HomeContent() {
 
   return (
     <>
-      {/* Hero Section with Search */}
       <section className="bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-700 py-16 px-4">
         <SearchSection />
         
-        {/* Stats */}
         <div className="max-w-5xl mx-auto mt-14">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {stats.map((stat, i) => (
@@ -108,7 +123,6 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* Featured Jobs Section */}
       <section className="py-16 px-4 bg-gray-50">
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center mb-12 flex-wrap gap-4">
@@ -148,7 +162,6 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* How It Works */}
       <section className="py-16 px-4 bg-white">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold text-center text-gray-800 mb-12">How It Works</h2>
@@ -178,7 +191,7 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* ✅ UPDATED CTA Section - WITH AUTH CONDITION */}
+      {/* ✅ UPDATED CTA Section */}
       <section className="py-16 px-4 bg-gradient-to-r from-cyan-600 to-blue-600">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
@@ -189,7 +202,7 @@ function HomeContent() {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            {/* ✅ Post a Job button - ALWAYS shows */}
+            {/* Post a Job - Always show */}
             <Link 
               href={isCompanyLoggedIn ? "/company/dashboard/post-job" : "/company/signup"}
               className="bg-white text-cyan-600 hover:bg-gray-100 font-bold px-8 py-3 rounded-full transition"
@@ -197,7 +210,7 @@ function HomeContent() {
               Post a Job
             </Link>
             
-            {/* ❌ Company Login button - ONLY shows when NOT logged in */}
+            {/* Company Login - Only show when NOT logged in */}
             {!isCompanyLoggedIn && (
               <Link 
                 href="/company/login"
@@ -207,13 +220,18 @@ function HomeContent() {
               </Link>
             )}
           </div>
+          
+          {/* ✅ Debug info - Remove after testing */}
+          <p className="text-white/50 text-xs mt-4">
+            Debug: Logged in: {isCompanyLoggedIn ? "YES" : "NO"}
+          </p>
         </div>
       </section>
     </>
   );
 }
 
-// Main export with Suspense wrapper
+// Main export
 export default function HomePage() {
   return (
     <Suspense fallback={
