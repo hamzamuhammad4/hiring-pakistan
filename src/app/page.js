@@ -8,6 +8,7 @@ import { collection, query, orderBy, limit, getDocs, where } from "firebase/fire
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useAuth } from "@/lib/useAuth"; // ✅ Import auth hook
 
 // Fetch jobs function
 async function getAllJobs() {
@@ -31,6 +32,7 @@ async function getAllJobs() {
 
 // Main content component that uses searchParams
 function HomeContent() {
+  const { user, role } = useAuth(); // ✅ Get auth state
   const searchParams = useSearchParams();
   const [allJobs, setAllJobs] = useState([]);
   const [filteredJobs, setFilteredJobs] = useState([]);
@@ -39,6 +41,9 @@ function HomeContent() {
   // Get filters from URL
   const searchQuery = searchParams.get('search') || "";
   const categoryFilter = searchParams.get('category') || "All";
+
+  // ✅ Check if company is logged in
+  const isCompanyLoggedIn = user && role === "company" && user.emailVerified === true;
 
   // Load jobs
   useEffect(() => {
@@ -173,7 +178,7 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* ✅ UPDATED CTA Section - WITH AUTH CONDITION */}
       <section className="py-16 px-4 bg-gradient-to-r from-cyan-600 to-blue-600">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
@@ -182,19 +187,25 @@ function HomeContent() {
           <p className="text-cyan-100 mb-8 text-lg">
             Join leading companies who found their ideal candidates through Hiring Pakistan
           </p>
+          
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            {/* ✅ Post a Job button - ALWAYS shows */}
             <Link 
-              href="/company/signup"
+              href={isCompanyLoggedIn ? "/company/dashboard/post-job" : "/company/signup"}
               className="bg-white text-cyan-600 hover:bg-gray-100 font-bold px-8 py-3 rounded-full transition"
             >
               Post a Job
             </Link>
-            <Link 
-              href="/company/login"
-              className="bg-transparent border-2 border-white text-white hover:bg-white/10 font-bold px-8 py-3 rounded-full transition"
-            >
-              Company Login
-            </Link>
+            
+            {/* ❌ Company Login button - ONLY shows when NOT logged in */}
+            {!isCompanyLoggedIn && (
+              <Link 
+                href="/company/login"
+                className="bg-transparent border-2 border-white text-white hover:bg-white/10 font-bold px-8 py-3 rounded-full transition"
+              >
+                Company Login
+              </Link>
+            )}
           </div>
         </div>
       </section>
