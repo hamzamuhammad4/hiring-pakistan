@@ -1,4 +1,4 @@
-// src/components/Footer.js
+// src/components/Footer.js - WITH AUTH CONDITION
 "use client";
 
 import { useState } from "react";
@@ -8,12 +8,17 @@ import {
   Facebook, Twitter, Linkedin, Instagram, Mail, 
   Phone, Send, ChevronRight, Youtube
 } from "lucide-react";
+import { useAuth } from "@/lib/useAuth"; // ✅ Import auth hook
 
 export default function Footer() {
+  const { user, role } = useAuth(); // ✅ Get auth state
   const currentYear = new Date().getFullYear();
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterStatus, setNewsletterStatus] = useState(null);
   const [newsletterLoading, setNewsletterLoading] = useState(false);
+
+  // ✅ Check if company is logged in
+  const isCompanyLoggedIn = user && role === "company" && user.emailVerified === true;
 
   const handleNewsletterSubscribe = async (e) => {
     e.preventDefault();
@@ -102,11 +107,35 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Column 3 - For Employers */}
+          {/* ✅ Column 3 - For Employers (UPDATED with condition) */}
           <div>
             <h3 className="text-white font-bold text-lg mb-4">For Employers</h3>
             <ul className="space-y-2">
-              <li><Link href="/company/login" className="text-gray-400 hover:text-cyan-500 transition flex items-center gap-1"><ChevronRight className="h-4 w-4" /> Company Login</Link></li>
+              {/* ✅ Company Login - Hide when company is logged in */}
+              {!isCompanyLoggedIn && (
+                <li>
+                  <Link href="/company/login" className="text-gray-400 hover:text-cyan-500 transition flex items-center gap-1">
+                    <ChevronRight className="h-4 w-4" /> Company Login
+                  </Link>
+                </li>
+              )}
+              
+              {/* ✅ Dashboard - Show when company is logged in */}
+              {isCompanyLoggedIn && (
+                <li>
+                  <Link href="/company/dashboard" className="text-gray-400 hover:text-cyan-500 transition flex items-center gap-1">
+                    <ChevronRight className="h-4 w-4" /> Dashboard
+                  </Link>
+                </li>
+              )}
+              
+              {/* ✅ Post a Job - Always show */}
+              <li>
+                <Link href={isCompanyLoggedIn ? "/company/dashboard/post-job" : "/pricing"} className="text-gray-400 hover:text-cyan-500 transition flex items-center gap-1">
+                  <ChevronRight className="h-4 w-4" /> Post a Job
+                </Link>
+              </li>
+              
               <li><Link href="/pricing" className="text-gray-400 hover:text-cyan-500 transition flex items-center gap-1"><ChevronRight className="h-4 w-4" /> Pricing Plans</Link></li>
               <li><Link href="/hire" className="text-gray-400 hover:text-cyan-500 transition flex items-center gap-1"><ChevronRight className="h-4 w-4" /> Hire Talent</Link></li>
               <li><a href="https://wa.me/923482350367" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-green-500 transition flex items-center gap-1"><ChevronRight className="h-4 w-4" /> WhatsApp Support</a></li>
@@ -137,7 +166,7 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* ✅ Newsletter Section - Mobile Responsive Fixed */}
+        {/* Newsletter Section */}
         <div className="border-t border-gray-800 mt-8 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="text-center md:text-left">
