@@ -1,4 +1,4 @@
-// src/app/company/signup/page.js
+// src/app/company/signup/page.js - FULLY FIXED
 "use client";
 
 import { useState } from "react";
@@ -49,11 +49,30 @@ export default function CompanySignup() {
     setLoading(true);
     
     try {
+      // 1. Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
       const user = userCredential.user;
       
+      // 2. Send email verification
       await sendEmailVerification(user);
       
+      // ✅ 3. FIXED: Save to BOTH collections with ROLE
+      
+      // 3a. Save to 'users' collection (for auth/role checking)
+      await setDoc(doc(db, "users", user.uid), {
+        email: formData.email,
+        role: "company",           // ← CRITICAL: Role set karo
+        companyName: formData.companyName,
+        contactPerson: formData.contactPerson,
+        phone: formData.phone || "",
+        city: formData.city || "",
+        status: "active",
+        emailVerified: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      
+      // 3b. Save to 'companies' collection (for company-specific data)
       await setDoc(doc(db, "companies", user.uid), {
         companyName: formData.companyName,
         contactPerson: formData.contactPerson,
@@ -63,6 +82,7 @@ export default function CompanySignup() {
         credits: 0,
         plan: "Basic",
         status: "active",
+        role: "company",           // ← Role yahan bhi set karo
         createdAt: new Date(),
         updatedAt: new Date()
       });
