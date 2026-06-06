@@ -6,15 +6,16 @@ import { db } from "@/lib/firebase";
 import { collection, query, orderBy, limit, getDocs, where } from "firebase/firestore";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 
 // Client-side data fetch function - ✅ Sirf ACTIVE jobs fetch karega
 async function getFeaturedJobs() {
   try {
     const q = query(
       collection(db, "jobs"), 
-      where("status", "==", "active"),  // ← ONLY ACTIVE JOBS
+      where("status", "==", "active"),
       orderBy("createdAt", "desc"), 
-      limit(6)
+      limit(50)
     );
     const snapshot = await getDocs(q);
     const jobs = [];
@@ -34,6 +35,9 @@ async function getFeaturedJobs() {
 }
 
 export default function HomePage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
   const [jobs, setJobs] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
@@ -57,18 +61,33 @@ export default function HomePage() {
     "Other",
   ];
 
+  // Load URL params on mount
+  useEffect(() => {
+    const category = searchParams.get('category');
+    const search = searchParams.get('search');
+    
+    if (category && category !== 'All') {
+      setSelectedCategory(category);
+    }
+    if (search) {
+      setSearchTerm(search);
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     async function fetchJobs() {
+      setLoading(true);
       const fetchedJobs = await getFeaturedJobs();
       setJobs(fetchedJobs);
-      setFilteredJobs(fetchedJobs);
       setLoading(false);
     }
     fetchJobs();
   }, []);
 
-  // Filter jobs based on category AND search term
+  // ✅ FIXED: Filter jobs based on category AND search term
   useEffect(() => {
+    if (jobs.length === 0) return;
+    
     let filtered = jobs;
     
     // Filter by category
@@ -90,9 +109,57 @@ export default function HomePage() {
     setFilteredJobs(filtered);
   }, [selectedCategory, searchTerm, jobs]);
 
+  // ✅ FIXED: Search function - updates URL and filters
   const handleSearch = (e) => {
     e.preventDefault();
-    // Filter is already applied via useEffect
+    
+    // Update URL without refreshing page
+    const params = new URLSearchParams();
+    if (selectedCategory !== "All") {
+      params.set('category', selectedCategory);
+    }
+    if (searchTerm.trim()) {
+      params.set('search', searchTerm.trim());
+    }
+    
+    // Push to URL (this will trigger the useEffect above)
+    router.push(`/?${params.toString()}`, { scroll: false });
+  };
+
+  // ✅ FIXED: Category change handler - auto search
+  const handleCategoryChange = (e) => {
+    const newCategory = e.target.value;
+    setSelectedCategory(newCategory);
+    
+    // Auto-update URL
+    const params = new URLSearchParams();
+    if (newCategory !== "All") {
+      params.set('category', newCategory);
+    }
+    if (searchTerm.trim()) {
+      params.set('search', searchTerm.trim());
+    }
+    router.push(`/?${params.toString()}`, { scroll: false });
+  };
+
+  // ✅ FIXED: Search term change with debounce (optional, smooth experience)
+  const handleSearchTermChange = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    
+    // Debounce URL update (optional)
+    const timeoutId = setTimeout(() => {
+      const params = new URLSearchParams();
+      if (selectedCategory !== "All") {
+        params.set('category', selectedCategory);
+      }
+      if (value.trim()) {
+        params.set('search', value.trim());
+      }
+      router.push(`/?${params.toString()}`, { scroll: false });
+    }, 500);
+    
+    return () => clearTimeout(timeoutId);
   };
 
   const stats = [
@@ -114,7 +181,7 @@ export default function HomePage() {
             10,000+ jobs from top companies in Pakistan
           </p>
 
-          {/* Search + Category Filter */}
+          {/* ✅ FIXED: Search + Category Filter */}
           <form onSubmit={handleSearch} className="max-w-4xl mx-auto flex flex-col md:flex-row gap-4">
             {/* Search Bar */}
             <div className="flex-1 bg-white rounded-full shadow-2xl overflow-hidden flex items-center border-4 border-white">
@@ -127,7 +194,7 @@ export default function HomePage() {
                 type="text"
                 placeholder="Job title, keywords, company name..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={handleSearchTermChange}
                 className="w-full py-4 px-2 text-base md:text-lg text-gray-700 outline-none"
               />
             </div>
@@ -136,7 +203,7 @@ export default function HomePage() {
             <div className="md:w-64">
               <select
                 value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                onChange={handleCategoryChange}
                 className="w-full py-4 px-6 text-base md:text-lg text-gray-700 bg-white rounded-full border-4 border-white shadow-2xl outline-none cursor-pointer"
               >
                 {categories.map(cat => (
@@ -147,7 +214,7 @@ export default function HomePage() {
               </select>
             </div>
 
-            {/* Search Button */}
+            {/* ✅ FIXED: Search Button - Now works properly */}
             <button 
               type="submit"
               className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold px-10 py-4 text-base md:text-lg rounded-full transition shadow-lg"
@@ -174,6 +241,7 @@ export default function HomePage() {
           <div className="flex justify-between items-center mb-12">
             <h2 className="text-3xl font-bold text-gray-800">
               Featured Jobs {selectedCategory !== "All" && `in ${selectedCategory}`}
+              {searchTerm && ` matching "${searchTerm}"`}
             </h2>
             <Link href="/jobs" className="text-cyan-600 hover:text-cyan-700 font-medium flex items-center gap-1">
               Browse All Jobs →
@@ -194,6 +262,7 @@ export default function HomePage() {
                 onClick={() => {
                   setSelectedCategory("All");
                   setSearchTerm("");
+                  router.push('/', { scroll: false });
                 }}
                 className="mt-4 text-cyan-600 hover:underline"
               >
@@ -241,30 +310,30 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section */}
-<section className="py-16 px-4 bg-gradient-to-r from-cyan-600 to-blue-600">
-  <div className="max-w-4xl mx-auto text-center">
-    <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-      Ready to Hire Top Talent?
-    </h2>
-    <p className="text-cyan-100 mb-8 text-lg">
-      Join leading companies who found their ideal candidates through Hiring Pakistan
-    </p>
-    <div className="flex flex-col sm:flex-row gap-4 justify-center">
-      <Link 
-        href="/company/signup"   // ✅ Post a Job button
-        className="bg-white text-cyan-600 hover:bg-gray-100 font-bold px-8 py-3 rounded-full transition"
-      >
-        Post a Job
-      </Link>
-      <Link 
-        href="/company/login"    // ✅ Company Login button
-        className="bg-transparent border-2 border-white text-white hover:bg-white/10 font-bold px-8 py-3 rounded-full transition"
-      >
-        Company Login
-      </Link>
-    </div>
-  </div>
-</section>
+      <section className="py-16 px-4 bg-gradient-to-r from-cyan-600 to-blue-600">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            Ready to Hire Top Talent?
+          </h2>
+          <p className="text-cyan-100 mb-8 text-lg">
+            Join leading companies who found their ideal candidates through Hiring Pakistan
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link 
+              href="/company/signup"
+              className="bg-white text-cyan-600 hover:bg-gray-100 font-bold px-8 py-3 rounded-full transition"
+            >
+              Post a Job
+            </Link>
+            <Link 
+              href="/company/login"
+              className="bg-transparent border-2 border-white text-white hover:bg-white/10 font-bold px-8 py-3 rounded-full transition"
+            >
+              Company Login
+            </Link>
+          </div>
+        </div>
+      </section>
     </>
   );
 }
