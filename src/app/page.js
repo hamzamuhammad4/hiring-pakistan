@@ -1,9 +1,9 @@
-// src/app/page.js (debug version with direct auth check)
+// src/app/page.js - FINAL CLEAN VERSION (No Debug Text)
 "use client";
 
 import JobCard from "@/components/JobCard";
 import SearchSection from "@/components/SearchSection";
-import { db, auth } from "@/lib/firebase"; // ✅ auth bhi import karo
+import { db, auth } from "@/lib/firebase";
 import { collection, query, orderBy, limit, getDocs, where } from "firebase/firestore";
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
@@ -35,26 +35,19 @@ function HomeContent() {
   const [allJobs, setAllJobs] = useState([]);
   const [filteredJobs, setFilteredJobs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isCompanyLoggedIn, setIsCompanyLoggedIn] = useState(false); // ✅ Direct state
+  const [isCompanyLoggedIn, setIsCompanyLoggedIn] = useState(false);
 
   // Get filters from URL
   const searchQuery = searchParams.get('search') || "";
   const categoryFilter = searchParams.get('category') || "All";
 
-  // ✅ Direct Firebase auth check - MOST RELIABLE
+  // Direct Firebase auth check
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      console.log("Auth state changed:", user?.email, "Verified:", user?.emailVerified);
-      
       if (user && user.emailVerified) {
-        // Check if user is company from Firestore
-        const userDoc = await import('firebase/firestore').then(({ doc, getDoc }) => 
-          getDoc(doc(db, 'users', user.uid))
-        );
+        const { doc, getDoc } = await import('firebase/firestore');
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
         const role = userDoc.exists() ? userDoc.data().role : null;
-        console.log("User role from DB:", role);
-        
-        // ✅ Condition: logged in AND role is company
         setIsCompanyLoggedIn(role === "company" || role === "employer");
       } else {
         setIsCompanyLoggedIn(false);
@@ -191,7 +184,7 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* ✅ UPDATED CTA Section */}
+      {/* CTA Section - CLEAN (No Debug Text) */}
       <section className="py-16 px-4 bg-gradient-to-r from-cyan-600 to-blue-600">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
@@ -202,7 +195,6 @@ function HomeContent() {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            {/* Post a Job - Always show */}
             <Link 
               href={isCompanyLoggedIn ? "/company/dashboard/post-job" : "/company/signup"}
               className="bg-white text-cyan-600 hover:bg-gray-100 font-bold px-8 py-3 rounded-full transition"
@@ -210,7 +202,6 @@ function HomeContent() {
               Post a Job
             </Link>
             
-            {/* Company Login - Only show when NOT logged in */}
             {!isCompanyLoggedIn && (
               <Link 
                 href="/company/login"
@@ -220,11 +211,6 @@ function HomeContent() {
               </Link>
             )}
           </div>
-          
-          {/* ✅ Debug info - Remove after testing */}
-          <p className="text-white/50 text-xs mt-4">
-            Debug: Logged in: {isCompanyLoggedIn ? "YES" : "NO"}
-          </p>
         </div>
       </section>
     </>
