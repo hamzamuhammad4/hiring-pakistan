@@ -1,4 +1,4 @@
-// src/app/admin/subscriptions/page.js - WORKING CAROUSEL
+// src/app/admin/subscriptions/page.js - 100% WORKING
 "use client";
 
 import { useState, useEffect } from "react";
@@ -19,25 +19,7 @@ export default function AdminSubscriptions() {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [itemsPerPage, setItemsPerPage] = useState(3);
-
-  // Responsive items per page
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 768) {
-        setItemsPerPage(1);
-      } else if (window.innerWidth < 1024) {
-        setItemsPerPage(2);
-      } else {
-        setItemsPerPage(3);
-      }
-    };
-    
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
     fetchPlans();
@@ -46,22 +28,12 @@ export default function AdminSubscriptions() {
   const fetchPlans = async () => {
     try {
       setLoading(true);
-      setError(null);
-      
-      let plansList = [];
-      try {
-        const plansSnap = await getDocs(query(collection(db, "subscriptions"), orderBy("price", "asc")));
-        plansList = plansSnap.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      } catch (err) {
-        plansList = [];
-      }
-      
+      const plansSnap = await getDocs(query(collection(db, "subscriptions"), orderBy("price", "asc")));
+      const plansList = plansSnap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
       setPlans(plansList);
-      setCurrentIndex(0);
-      
     } catch (err) {
       console.error(err);
       setError(err.message);
@@ -77,9 +49,7 @@ export default function AdminSubscriptions() {
         status: newStatus,
         updatedAt: new Date()
       });
-      setPlans(plans.map(p => 
-        p.id === planId ? { ...p, status: newStatus } : p
-      ));
+      setPlans(plans.map(p => p.id === planId ? { ...p, status: newStatus } : p));
       toast.success(`Plan ${newStatus === 'active' ? 'activated' : 'deactivated'}`);
     } catch (error) {
       toast.error("Failed to update status");
@@ -97,34 +67,24 @@ export default function AdminSubscriptions() {
     }
   };
 
-  // Carousel navigation
-  const totalPages = Math.ceil(plans.length / itemsPerPage);
-  const startIndex = currentIndex * itemsPerPage;
-  const visiblePlans = plans.slice(startIndex, startIndex + itemsPerPage);
-
+  // Carousel functions
   const nextSlide = () => {
-    if (currentIndex < totalPages - 1) {
-      setCurrentIndex(currentIndex + 1);
-    }
+    setCurrentSlide((prev) => (prev + 1) % Math.ceil(plans.length / 3));
   };
 
   const prevSlide = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
-    }
+    setCurrentSlide((prev) => (prev - 1 + Math.ceil(plans.length / 3)) % Math.ceil(plans.length / 3));
   };
 
-  const goToSlide = (index) => {
-    setCurrentIndex(index);
+  const getVisiblePlans = () => {
+    const start = currentSlide * 3;
+    return plans.slice(start, start + 3);
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading subscription plans...</p>
-        </div>
+      <div className="flex justify-center items-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
       </div>
     );
   }
@@ -133,142 +93,78 @@ export default function AdminSubscriptions() {
     return (
       <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
         <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-        <h3 className="text-xl font-bold text-gray-800 mb-2">Unable to Load Plans</h3>
-        <p className="text-gray-500 mb-4">{error}</p>
-        <button 
-          onClick={fetchPlans}
-          className="bg-cyan-600 text-white px-6 py-2 rounded-lg hover:bg-cyan-700"
-        >
-          Retry
-        </button>
+        <p className="text-gray-500">{error}</p>
+        <button onClick={fetchPlans} className="mt-4 bg-cyan-600 text-white px-4 py-2 rounded">Retry</button>
       </div>
     );
   }
 
+  const visiblePlans = getVisiblePlans();
+  const totalSlides = Math.ceil(plans.length / 3);
+
   return (
-    <div>
-      <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
+    <div className="p-6">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">📋 Subscription Plans</h1>
-          <p className="text-gray-500 mt-1">Manage pricing plans and credit packages</p>
+          <h1 className="text-2xl font-bold">Subscription Plans</h1>
+          <p className="text-gray-500 text-sm">Manage pricing plans and credit packages</p>
         </div>
-        <Link
-          href="/admin/subscriptions/add"
-          className="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-3 rounded-xl flex items-center gap-2"
-        >
-          <Plus className="h-5 w-5" /> Add New Plan
+        <Link href="/admin/subscriptions/add" className="bg-cyan-600 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+          <Plus className="h-4 w-4" /> Add Plan
         </Link>
       </div>
 
       {plans.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-lg p-16 text-center">
+        <div className="text-center py-20 bg-white rounded-2xl">
           <CreditCard className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <p className="text-xl text-gray-500 mb-2">No subscription plans yet</p>
-          <p className="text-gray-400 mb-6">Create your first plan using the button above</p>
-          <Link
-            href="/admin/subscriptions/add"
-            className="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-3 rounded-xl inline-flex items-center gap-2"
-          >
-            <Plus className="h-5 w-5" /> Create First Plan
-          </Link>
+          <p>No plans yet. Create your first plan.</p>
         </div>
       ) : (
         <>
-          {/* ✅ CAROUSEL CONTAINER */}
+          {/* Carousel Container */}
           <div className="relative">
-            {/* Carousel Navigation - Left Arrow */}
-            {currentIndex > 0 && (
+            {/* Left Arrow */}
+            {totalSlides > 1 && (
               <button
                 onClick={prevSlide}
-                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 bg-white hover:bg-gray-100 rounded-full p-3 shadow-lg transition-all"
+                className="absolute left-0 top-1/2 -translate-y-1/2 -ml-4 z-10 bg-white rounded-full p-2 shadow-lg"
               >
-                <ChevronLeft className="h-6 w-6 text-gray-700" />
+                <ChevronLeft className="h-5 w-5" />
               </button>
             )}
 
-            {/* Carousel Items */}
-            <div className="overflow-hidden px-2">
-              <div 
-                className="flex transition-transform duration-300 ease-in-out gap-6"
-                style={{ transform: `translateX(0)` }}
-              >
+            {/* Slides */}
+            <div className="overflow-hidden">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {visiblePlans.map((plan) => (
-                  <div 
-                    key={plan.id} 
-                    className="flex-shrink-0 w-full md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]"
-                    style={{ flex: `0 0 calc(${100 / itemsPerPage}% - ${(itemsPerPage - 1) * 24 / itemsPerPage}px)` }}
-                  >
-                    <div 
-                      className={`bg-white rounded-2xl shadow-lg overflow-hidden transition-all hover:shadow-xl h-full ${
-                        plan.popular ? 'border-2 border-cyan-500 relative' : ''
-                      }`}
-                    >
-                      {plan.popular && (
-                        <div className="bg-cyan-500 text-white text-center py-2 text-sm font-bold flex items-center justify-center gap-2">
-                          <Star className="h-4 w-4" /> MOST POPULAR
-                        </div>
-                      )}
+                  <div key={plan.id} className={`bg-white rounded-xl shadow-lg overflow-hidden ${plan.popular ? 'border-2 border-cyan-500' : ''}`}>
+                    {plan.popular && (
+                      <div className="bg-cyan-500 text-white text-center py-1 text-sm">
+                        ⭐ MOST POPULAR
+                      </div>
+                    )}
+                    <div className="p-5">
+                      <h3 className="text-xl font-bold">{plan.name}</h3>
+                      <p className="text-2xl font-bold text-cyan-600 mt-2">PKR {plan.price?.toLocaleString() || 0}</p>
+                      <p className="text-sm text-gray-500">{plan.credits} credits</p>
                       
-                      <div className="p-6">
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <h3 className="text-xl font-bold text-gray-800">{plan.name}</h3>
-                            <p className="text-2xl font-bold text-cyan-600 mt-2">
-                              PKR {plan.price?.toLocaleString() || 0}
-                            </p>
-                            <p className="text-sm text-gray-500">{plan.credits} credits</p>
-                          </div>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            plan.status === 'active' 
-                              ? 'bg-green-100 text-green-700' 
-                              : 'bg-gray-100 text-gray-500'
-                          }`}>
-                            {plan.status === 'active' ? 'Active' : 'Inactive'}
-                          </span>
-                        </div>
+                      <div className="mt-4">
+                        <span className={`px-2 py-1 rounded text-xs ${plan.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                          {plan.status === 'active' ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
 
-                        <ul className="space-y-2 mb-6">
-                          {plan.features?.slice(0, 3).map((feature, idx) => (
-                            <li key={idx} className="flex items-center gap-2 text-sm text-gray-600">
-                              <CheckCircle className="h-4 w-4 text-green-500" />
-                              <span className="truncate">{feature}</span>
-                            </li>
-                          ))}
-                          {plan.features?.length > 3 && (
-                            <li className="text-xs text-gray-400 pl-6">
-                              +{plan.features.length - 3} more
-                            </li>
-                          )}
-                        </ul>
-
-                        <div className="flex gap-2">
-                          <Link
-                            href={`/admin/subscriptions/${plan.id}/edit`}
-                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm flex items-center justify-center gap-1"
-                          >
-                            <Edit className="h-4 w-4" /> Edit
-                          </Link>
-                          <button
-                            onClick={() => handleToggleStatus(plan.id, plan.status)}
-                            className={`flex-1 py-2 rounded-lg text-sm flex items-center justify-center gap-1 ${
-                              plan.status === 'active'
-                                ? 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                                : 'bg-green-600 text-white hover:bg-green-700'
-                            }`}
-                          >
-                            {plan.status === 'active' ? (
-                              <><XCircle className="h-4 w-4" /> Deactivate</>
-                            ) : (
-                              <><CheckCircle className="h-4 w-4" /> Activate</>
-                            )}
-                          </button>
-                          <button
-                            onClick={() => handleDelete(plan.id)}
-                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
+                      <div className="flex gap-2 mt-4">
+                        <Link href={`/admin/subscriptions/${plan.id}/edit`} className="flex-1 bg-blue-600 text-white text-center py-2 rounded text-sm">
+                          Edit
+                        </Link>
+                        <button onClick={() => handleToggleStatus(plan.id, plan.status)} className={`flex-1 py-2 rounded text-sm ${plan.status === 'active' ? 'bg-gray-200' : 'bg-green-600 text-white'}`}>
+                          {plan.status === 'active' ? 'Deactivate' : 'Activate'}
+                        </button>
+                        <button onClick={() => handleDelete(plan.id)} className="bg-red-600 text-white px-3 py-2 rounded text-sm">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -276,60 +172,37 @@ export default function AdminSubscriptions() {
               </div>
             </div>
 
-            {/* Carousel Navigation - Right Arrow */}
-            {currentIndex < totalPages - 1 && (
+            {/* Right Arrow */}
+            {totalSlides > 1 && (
               <button
                 onClick={nextSlide}
-                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 bg-white hover:bg-gray-100 rounded-full p-3 shadow-lg transition-all"
+                className="absolute right-0 top-1/2 -translate-y-1/2 -mr-4 z-10 bg-white rounded-full p-2 shadow-lg"
               >
-                <ChevronRight className="h-6 w-6 text-gray-700" />
+                <ChevronRight className="h-5 w-5" />
               </button>
             )}
           </div>
 
-          {/* Pagination Dots */}
-          {totalPages > 1 && (
-            <div className="flex justify-center gap-2 mt-8">
-              {Array.from({ length: totalPages }).map((_, idx) => (
+          {/* Dots */}
+          {totalSlides > 1 && (
+            <div className="flex justify-center gap-2 mt-6">
+              {Array.from({ length: totalSlides }).map((_, i) => (
                 <button
-                  key={idx}
-                  onClick={() => goToSlide(idx)}
-                  className={`h-2 rounded-full transition-all ${
-                    currentIndex === idx 
-                      ? 'w-8 bg-cyan-600' 
-                      : 'w-2 bg-gray-300 hover:bg-gray-400'
-                  }`}
+                  key={i}
+                  onClick={() => setCurrentSlide(i)}
+                  className={`h-2 rounded-full transition-all ${currentSlide === i ? 'w-6 bg-cyan-600' : 'w-2 bg-gray-300'}`}
                 />
               ))}
             </div>
           )}
 
-          {/* Stats Summary */}
-          <div className="mt-8 bg-gray-50 rounded-xl p-4 flex justify-between items-center flex-wrap gap-4">
-            <div className="flex gap-6">
-              <div>
-                <span className="text-xs text-gray-500">Total Plans</span>
-                <p className="text-2xl font-bold text-gray-800">{plans.length}</p>
-              </div>
-              <div>
-                <span className="text-xs text-gray-500">Active Plans</span>
-                <p className="text-2xl font-bold text-green-600">
-                  {plans.filter(p => p.status === 'active').length}
-                </p>
-              </div>
-              <div>
-                <span className="text-xs text-gray-500">Inactive Plans</span>
-                <p className="text-2xl font-bold text-gray-500">
-                  {plans.filter(p => p.status !== 'active').length}
-                </p>
-              </div>
+          {/* Stats */}
+          <div className="mt-6 bg-gray-50 rounded-lg p-4 flex justify-between">
+            <div className="flex gap-4">
+              <div><span className="text-xs text-gray-500">Total</span><p className="text-xl font-bold">{plans.length}</p></div>
+              <div><span className="text-xs text-gray-500">Active</span><p className="text-xl font-bold text-green-600">{plans.filter(p => p.status === 'active').length}</p></div>
             </div>
-            <button 
-              onClick={fetchPlans}
-              className="text-gray-500 hover:text-cyan-600 transition"
-            >
-              <RefreshCw className="h-5 w-5" />
-            </button>
+            <button onClick={fetchPlans}><RefreshCw className="h-5 w-5 text-gray-500" /></button>
           </div>
         </>
       )}
