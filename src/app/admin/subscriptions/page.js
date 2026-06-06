@@ -1,4 +1,4 @@
-// src/app/admin/subscriptions/page.js - 100% WORKING
+// src/app/admin/subscriptions/page.js - INLINE STYLES VERSION
 "use client";
 
 import { useState, useEffect } from "react";
@@ -19,7 +19,7 @@ export default function AdminSubscriptions() {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
     fetchPlans();
@@ -68,102 +68,193 @@ export default function AdminSubscriptions() {
   };
 
   // Carousel functions
+  const itemsPerPage = 3;
+  const totalSlides = Math.ceil(plans.length / itemsPerPage);
+  const startIndex = currentIndex * itemsPerPage;
+  const visiblePlans = plans.slice(startIndex, startIndex + itemsPerPage);
+
   const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % Math.ceil(plans.length / 3));
+    if (currentIndex < totalSlides - 1) {
+      setCurrentIndex(currentIndex + 1);
+    }
   };
 
   const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + Math.ceil(plans.length / 3)) % Math.ceil(plans.length / 3));
-  };
-
-  const getVisiblePlans = () => {
-    const start = currentSlide * 3;
-    return plans.slice(start, start + 3);
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+    }
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+        <div style={{ width: '40px', height: '40px', border: '3px solid #e2e8f0', borderTopColor: '#0891b2', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
-        <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-        <p className="text-gray-500">{error}</p>
-        <button onClick={fetchPlans} className="mt-4 bg-cyan-600 text-white px-4 py-2 rounded">Retry</button>
+      <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '48px', textAlign: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+        <AlertTriangle style={{ width: '48px', height: '48px', color: '#eab308', margin: '0 auto 16px' }} />
+        <p style={{ color: '#6b7280' }}>{error}</p>
+        <button onClick={fetchPlans} style={{ marginTop: '16px', backgroundColor: '#0891b2', color: 'white', padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer' }}>Retry</button>
       </div>
     );
   }
 
-  const visiblePlans = getVisiblePlans();
-  const totalSlides = Math.ceil(plans.length / 3);
-
   return (
-    <div className="p-6">
+    <div style={{ padding: '24px' }}>
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 className="text-2xl font-bold">Subscription Plans</h1>
-          <p className="text-gray-500 text-sm">Manage pricing plans and credit packages</p>
+          <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: '#1f2937', margin: 0 }}>📋 Subscription Plans</h1>
+          <p style={{ color: '#6b7280', marginTop: '4px' }}>Manage pricing plans and credit packages</p>
         </div>
-        <Link href="/admin/subscriptions/add" className="bg-cyan-600 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-          <Plus className="h-4 w-4" /> Add Plan
+        <Link href="/admin/subscriptions/add" style={{ backgroundColor: '#0891b2', color: 'white', padding: '12px 24px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+          <Plus style={{ width: '20px', height: '20px' }} /> Add New Plan
         </Link>
       </div>
 
       {plans.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-2xl">
-          <CreditCard className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <p>No plans yet. Create your first plan.</p>
+        <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '64px', textAlign: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+          <CreditCard style={{ width: '64px', height: '64px', color: '#d1d5db', margin: '0 auto 16px' }} />
+          <p style={{ fontSize: '18px', color: '#6b7280' }}>No subscription plans yet</p>
+          <Link href="/admin/subscriptions/add" style={{ display: 'inline-block', marginTop: '16px', backgroundColor: '#0891b2', color: 'white', padding: '12px 24px', borderRadius: '12px', textDecoration: 'none' }}>Create First Plan</Link>
         </div>
       ) : (
         <>
           {/* Carousel Container */}
-          <div className="relative">
+          <div style={{ position: 'relative' }}>
             {/* Left Arrow */}
-            {totalSlides > 1 && (
+            {totalSlides > 1 && currentIndex > 0 && (
               <button
                 onClick={prevSlide}
-                className="absolute left-0 top-1/2 -translate-y-1/2 -ml-4 z-10 bg-white rounded-full p-2 shadow-lg"
+                style={{
+                  position: 'absolute',
+                  left: '-16px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  zIndex: 10,
+                  backgroundColor: 'white',
+                  borderRadius: '9999px',
+                  padding: '12px',
+                  border: '1px solid #e2e8f0',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                  transition: 'all 0.2s'
+                }}
               >
-                <ChevronLeft className="h-5 w-5" />
+                <ChevronLeft style={{ width: '20px', height: '20px' }} />
               </button>
             )}
 
-            {/* Slides */}
-            <div className="overflow-hidden">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Carousel Items */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
                 {visiblePlans.map((plan) => (
-                  <div key={plan.id} className={`bg-white rounded-xl shadow-lg overflow-hidden ${plan.popular ? 'border-2 border-cyan-500' : ''}`}>
+                  <div
+                    key={plan.id}
+                    style={{
+                      backgroundColor: 'white',
+                      borderRadius: '16px',
+                      boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                      overflow: 'hidden',
+                      transition: 'box-shadow 0.2s',
+                      border: plan.popular ? '2px solid #0891b2' : '1px solid #e2e8f0',
+                      position: 'relative'
+                    }}
+                  >
                     {plan.popular && (
-                      <div className="bg-cyan-500 text-white text-center py-1 text-sm">
-                        ⭐ MOST POPULAR
+                      <div style={{ backgroundColor: '#0891b2', color: 'white', textAlign: 'center', padding: '8px', fontSize: '14px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                        <Star style={{ width: '16px', height: '16px' }} /> MOST POPULAR
                       </div>
                     )}
-                    <div className="p-5">
-                      <h3 className="text-xl font-bold">{plan.name}</h3>
-                      <p className="text-2xl font-bold text-cyan-600 mt-2">PKR {plan.price?.toLocaleString() || 0}</p>
-                      <p className="text-sm text-gray-500">{plan.credits} credits</p>
-                      
-                      <div className="mt-4">
-                        <span className={`px-2 py-1 rounded text-xs ${plan.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                    
+                    <div style={{ padding: '24px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                        <div>
+                          <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: '#1f2937', margin: 0 }}>{plan.name}</h3>
+                          <p style={{ fontSize: '28px', fontWeight: 'bold', color: '#0891b2', marginTop: '8px', marginBottom: '4px' }}>
+                            PKR {plan.price?.toLocaleString() || 0}
+                          </p>
+                          <p style={{ fontSize: '14px', color: '#6b7280' }}>{plan.credits} credits</p>
+                        </div>
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '9999px',
+                          fontSize: '12px',
+                          backgroundColor: plan.status === 'active' ? '#dcfce7' : '#f3f4f6',
+                          color: plan.status === 'active' ? '#166534' : '#6b7280'
+                        }}>
                           {plan.status === 'active' ? 'Active' : 'Inactive'}
                         </span>
                       </div>
 
-                      <div className="flex gap-2 mt-4">
-                        <Link href={`/admin/subscriptions/${plan.id}/edit`} className="flex-1 bg-blue-600 text-white text-center py-2 rounded text-sm">
-                          Edit
+                      {plan.features && plan.features.length > 0 && (
+                        <ul style={{ marginTop: '16px', marginBottom: '24px', paddingLeft: 0, listStyle: 'none' }}>
+                          {plan.features.slice(0, 3).map((feature, idx) => (
+                            <li key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#4b5563', marginBottom: '8px' }}>
+                              <CheckCircle style={{ width: '16px', height: '16px', color: '#22c55e' }} />
+                              {feature}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+                        <Link
+                          href={`/admin/subscriptions/${plan.id}/edit`}
+                          style={{
+                            flex: 1,
+                            backgroundColor: '#2563eb',
+                            color: 'white',
+                            padding: '8px',
+                            borderRadius: '8px',
+                            textAlign: 'center',
+                            fontSize: '14px',
+                            textDecoration: 'none',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Edit style={{ width: '16px', height: '16px' }} /> Edit
                         </Link>
-                        <button onClick={() => handleToggleStatus(plan.id, plan.status)} className={`flex-1 py-2 rounded text-sm ${plan.status === 'active' ? 'bg-gray-200' : 'bg-green-600 text-white'}`}>
+                        <button
+                          onClick={() => handleToggleStatus(plan.id, plan.status)}
+                          style={{
+                            flex: 1,
+                            padding: '8px',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            border: 'none',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '4px',
+                            backgroundColor: plan.status === 'active' ? '#e5e7eb' : '#22c55e',
+                            color: plan.status === 'active' ? '#4b5563' : 'white'
+                          }}
+                        >
+                          {plan.status === 'active' ? <XCircle style={{ width: '16px', height: '16px' }} /> : <CheckCircle style={{ width: '16px', height: '16px' }} />}
                           {plan.status === 'active' ? 'Deactivate' : 'Activate'}
                         </button>
-                        <button onClick={() => handleDelete(plan.id)} className="bg-red-600 text-white px-3 py-2 rounded text-sm">
-                          <Trash2 className="h-4 w-4" />
+                        <button
+                          onClick={() => handleDelete(plan.id)}
+                          style={{
+                            backgroundColor: '#dc2626',
+                            color: 'white',
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <Trash2 style={{ width: '16px', height: '16px' }} />
                         </button>
                       </div>
                     </div>
@@ -173,36 +264,68 @@ export default function AdminSubscriptions() {
             </div>
 
             {/* Right Arrow */}
-            {totalSlides > 1 && (
+            {totalSlides > 1 && currentIndex < totalSlides - 1 && (
               <button
                 onClick={nextSlide}
-                className="absolute right-0 top-1/2 -translate-y-1/2 -mr-4 z-10 bg-white rounded-full p-2 shadow-lg"
+                style={{
+                  position: 'absolute',
+                  right: '-16px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  zIndex: 10,
+                  backgroundColor: 'white',
+                  borderRadius: '9999px',
+                  padding: '12px',
+                  border: '1px solid #e2e8f0',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
+                }}
               >
-                <ChevronRight className="h-5 w-5" />
+                <ChevronRight style={{ width: '20px', height: '20px' }} />
               </button>
             )}
           </div>
 
-          {/* Dots */}
+          {/* Pagination Dots */}
           {totalSlides > 1 && (
-            <div className="flex justify-center gap-2 mt-6">
-              {Array.from({ length: totalSlides }).map((_, i) => (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '32px' }}>
+              {Array.from({ length: totalSlides }).map((_, idx) => (
                 <button
-                  key={i}
-                  onClick={() => setCurrentSlide(i)}
-                  className={`h-2 rounded-full transition-all ${currentSlide === i ? 'w-6 bg-cyan-600' : 'w-2 bg-gray-300'}`}
+                  key={idx}
+                  onClick={() => setCurrentIndex(idx)}
+                  style={{
+                    height: '8px',
+                    borderRadius: '9999px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    backgroundColor: currentIndex === idx ? '#0891b2' : '#d1d5db',
+                    width: currentIndex === idx ? '32px' : '8px'
+                  }}
                 />
               ))}
             </div>
           )}
 
-          {/* Stats */}
-          <div className="mt-6 bg-gray-50 rounded-lg p-4 flex justify-between">
-            <div className="flex gap-4">
-              <div><span className="text-xs text-gray-500">Total</span><p className="text-xl font-bold">{plans.length}</p></div>
-              <div><span className="text-xs text-gray-500">Active</span><p className="text-xl font-bold text-green-600">{plans.filter(p => p.status === 'active').length}</p></div>
+          {/* Stats Summary */}
+          <div style={{ marginTop: '32px', backgroundColor: '#f9fafb', borderRadius: '12px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+            <div style={{ display: 'flex', gap: '24px' }}>
+              <div>
+                <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>Total Plans</p>
+                <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#1f2937', margin: 0 }}>{plans.length}</p>
+              </div>
+              <div>
+                <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>Active Plans</p>
+                <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#16a34a', margin: 0 }}>{plans.filter(p => p.status === 'active').length}</p>
+              </div>
+              <div>
+                <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>Inactive Plans</p>
+                <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#6b7280', margin: 0 }}>{plans.filter(p => p.status !== 'active').length}</p>
+              </div>
             </div>
-            <button onClick={fetchPlans}><RefreshCw className="h-5 w-5 text-gray-500" /></button>
+            <button onClick={fetchPlans} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280' }}>
+              <RefreshCw style={{ width: '20px', height: '20px' }} />
+            </button>
           </div>
         </>
       )}
