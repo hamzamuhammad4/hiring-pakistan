@@ -1,4 +1,4 @@
-// src/app/page.js
+// src/app/page.js - SAFE VERSION (502 fix)
 "use client";
 
 import JobCard from "@/components/JobCard";
@@ -6,9 +6,7 @@ import { db } from "@/lib/firebase";
 import { collection, query, orderBy, limit, getDocs, where } from "firebase/firestore";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
 
-// Client-side data fetch function - ✅ Sirf ACTIVE jobs fetch karega
 async function getFeaturedJobs() {
   try {
     const q = query(
@@ -35,67 +33,39 @@ async function getFeaturedJobs() {
 }
 
 export default function HomePage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  
   const [jobs, setJobs] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredJobs, setFilteredJobs] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Categories list
   const categories = [
-    "All",
-    "Web Development",
-    "Mobile App Development",
-    "Graphic Design",
-    "UI/UX Design",
-    "Digital Marketing",
-    "Content Writing",
-    "Software Engineering",
-    "Data Science / AI",
-    "DevOps / Cloud",
-    "Cyber Security",
-    "Network Engineering",
-    "Other",
+    "All", "Web Development", "Mobile App Development", "Graphic Design",
+    "UI/UX Design", "Digital Marketing", "Content Writing", "Software Engineering",
+    "Data Science / AI", "DevOps / Cloud", "Cyber Security", "Network Engineering", "Other",
   ];
-
-  // Load URL params on mount
-  useEffect(() => {
-    const category = searchParams.get('category');
-    const search = searchParams.get('search');
-    
-    if (category && category !== 'All') {
-      setSelectedCategory(category);
-    }
-    if (search) {
-      setSearchTerm(search);
-    }
-  }, [searchParams]);
 
   useEffect(() => {
     async function fetchJobs() {
       setLoading(true);
       const fetchedJobs = await getFeaturedJobs();
       setJobs(fetchedJobs);
+      setFilteredJobs(fetchedJobs);
       setLoading(false);
     }
     fetchJobs();
   }, []);
 
-  // ✅ FIXED: Filter jobs based on category AND search term
+  // Filter jobs
   useEffect(() => {
     if (jobs.length === 0) return;
     
     let filtered = jobs;
     
-    // Filter by category
     if (selectedCategory !== "All") {
       filtered = filtered.filter(job => job.category === selectedCategory);
     }
     
-    // Filter by search term
     if (searchTerm.trim() !== "") {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(job => 
@@ -109,57 +79,9 @@ export default function HomePage() {
     setFilteredJobs(filtered);
   }, [selectedCategory, searchTerm, jobs]);
 
-  // ✅ FIXED: Search function - updates URL and filters
   const handleSearch = (e) => {
     e.preventDefault();
-    
-    // Update URL without refreshing page
-    const params = new URLSearchParams();
-    if (selectedCategory !== "All") {
-      params.set('category', selectedCategory);
-    }
-    if (searchTerm.trim()) {
-      params.set('search', searchTerm.trim());
-    }
-    
-    // Push to URL (this will trigger the useEffect above)
-    router.push(`/?${params.toString()}`, { scroll: false });
-  };
-
-  // ✅ FIXED: Category change handler - auto search
-  const handleCategoryChange = (e) => {
-    const newCategory = e.target.value;
-    setSelectedCategory(newCategory);
-    
-    // Auto-update URL
-    const params = new URLSearchParams();
-    if (newCategory !== "All") {
-      params.set('category', newCategory);
-    }
-    if (searchTerm.trim()) {
-      params.set('search', searchTerm.trim());
-    }
-    router.push(`/?${params.toString()}`, { scroll: false });
-  };
-
-  // ✅ FIXED: Search term change with debounce (optional, smooth experience)
-  const handleSearchTermChange = (e) => {
-    const value = e.target.value;
-    setSearchTerm(value);
-    
-    // Debounce URL update (optional)
-    const timeoutId = setTimeout(() => {
-      const params = new URLSearchParams();
-      if (selectedCategory !== "All") {
-        params.set('category', selectedCategory);
-      }
-      if (value.trim()) {
-        params.set('search', value.trim());
-      }
-      router.push(`/?${params.toString()}`, { scroll: false });
-    }, 500);
-    
-    return () => clearTimeout(timeoutId);
+    // Filter already applied via useEffect
   };
 
   const stats = [
@@ -181,7 +103,7 @@ export default function HomePage() {
             10,000+ jobs from top companies in Pakistan
           </p>
 
-          {/* ✅ FIXED: Search + Category Filter */}
+          {/* Search Form */}
           <form onSubmit={handleSearch} className="max-w-4xl mx-auto flex flex-col md:flex-row gap-4">
             {/* Search Bar */}
             <div className="flex-1 bg-white rounded-full shadow-2xl overflow-hidden flex items-center border-4 border-white">
@@ -194,7 +116,7 @@ export default function HomePage() {
                 type="text"
                 placeholder="Job title, keywords, company name..."
                 value={searchTerm}
-                onChange={handleSearchTermChange}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full py-4 px-2 text-base md:text-lg text-gray-700 outline-none"
               />
             </div>
@@ -203,18 +125,16 @@ export default function HomePage() {
             <div className="md:w-64">
               <select
                 value={selectedCategory}
-                onChange={handleCategoryChange}
+                onChange={(e) => setSelectedCategory(e.target.value)}
                 className="w-full py-4 px-6 text-base md:text-lg text-gray-700 bg-white rounded-full border-4 border-white shadow-2xl outline-none cursor-pointer"
               >
                 {categories.map(cat => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
+                  <option key={cat} value={cat}>{cat}</option>
                 ))}
               </select>
             </div>
 
-            {/* ✅ FIXED: Search Button - Now works properly */}
+            {/* Search Button */}
             <button 
               type="submit"
               className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold px-10 py-4 text-base md:text-lg rounded-full transition shadow-lg"
@@ -241,7 +161,6 @@ export default function HomePage() {
           <div className="flex justify-between items-center mb-12">
             <h2 className="text-3xl font-bold text-gray-800">
               Featured Jobs {selectedCategory !== "All" && `in ${selectedCategory}`}
-              {searchTerm && ` matching "${searchTerm}"`}
             </h2>
             <Link href="/jobs" className="text-cyan-600 hover:text-cyan-700 font-medium flex items-center gap-1">
               Browse All Jobs →
@@ -262,7 +181,6 @@ export default function HomePage() {
                 onClick={() => {
                   setSelectedCategory("All");
                   setSearchTerm("");
-                  router.push('/', { scroll: false });
                 }}
                 className="mt-4 text-cyan-600 hover:underline"
               >
