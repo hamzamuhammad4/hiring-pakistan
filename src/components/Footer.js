@@ -137,11 +137,11 @@ export default function Footer() {
                   </Link>
                 </li>
               )}
-              <li>
+              {/* <li>
                 <Link href={isCompanyLoggedIn ? "/company/dashboard/post-job" : "/pricing"} className="text-gray-400 hover:text-cyan-500 transition flex items-center gap-1">
                   <ChevronRight className="h-4 w-4" /> Post a Job
                 </Link>
-              </li>
+              </li> */}
               <li><Link href="/pricing" className="text-gray-400 hover:text-cyan-500 transition flex items-center gap-1"><ChevronRight className="h-4 w-4" /> Pricing Plans</Link></li>
               <li><Link href="/hire" className="text-gray-400 hover:text-cyan-500 transition flex items-center gap-1"><ChevronRight className="h-4 w-4" /> Hire Talent</Link></li>
               <li><a href="https://wa.me/923482350367" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-green-500 transition flex items-center gap-1"><ChevronRight className="h-4 w-4" /> WhatsApp Support</a></li>
