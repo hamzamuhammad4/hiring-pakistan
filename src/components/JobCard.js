@@ -4,20 +4,48 @@ import Image from "next/image";
 import { Briefcase, MapPin, Calendar, Building2, Clock, GraduationCap } from "lucide-react";
 
 export default function JobCard({ job }) {
-  const postedDate = job.createdAt
-    ? new Date(job.createdAt).toLocaleDateString("en-GB", {
+  // ✅ FIX: Handle Firestore Timestamp properly
+  const getPostedDate = () => {
+    if (!job.createdAt) return "Recent";
+    
+    try {
+      // Check if it's Firestore Timestamp (has toDate method)
+      let date;
+      if (typeof job.createdAt.toDate === 'function') {
+        date = job.createdAt.toDate();
+      } 
+      // Check if it's already a Date object
+      else if (job.createdAt instanceof Date) {
+        date = job.createdAt;
+      }
+      // Check if it's a string or timestamp number
+      else if (typeof job.createdAt === 'string' || typeof job.createdAt === 'number') {
+        date = new Date(job.createdAt);
+      }
+      else {
+        return "Recent";
+      }
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return "Recent";
+      }
+      
+      return date.toLocaleDateString("en-GB", {
         day: "numeric",
         month: "short",
         year: "numeric",
-      })
-    : "Recent";
+      });
+    } catch (error) {
+      console.error("Date parsing error:", error);
+      return "Recent";
+    }
+  };
 
-  // ✅ Format salary - replace $ with PKR (keep the dollar sign icon removed)
+  // Format salary - replace $ with PKR
   const formatSalary = (salary) => {
     if (!salary) return "Negotiable";
-    // Replace $ with PKR
     let formatted = salary.replace(/\$/g, 'PKR');
-    // Also handle if there's space after $
     formatted = formatted.replace(/\$\s/g, 'PKR ');
     return formatted;
   };
@@ -28,6 +56,8 @@ export default function JobCard({ job }) {
     if (description.length <= 80) return description;
     return description.substring(0, 80) + "...";
   };
+
+  const postedDate = getPostedDate();
 
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition duration-300 h-full flex flex-col">
@@ -49,7 +79,7 @@ export default function JobCard({ job }) {
               <Link href={`/jobs/${job.id}`}>{job.title}</Link>
             </h3>
             <p className="text-gray-600 text-xs flex items-center gap-1">
-              <Building2 className="h-3 w-3" /> Hiring Pakistan
+              <Building2 className="h-3 w-3" /> {job.companyName || "Hiring Pakistan"}
             </p>
           </div>
         </div>
@@ -68,7 +98,7 @@ export default function JobCard({ job }) {
           )}
         </div>
 
-        {/* ✅ Salary - Full width, next line, with PKR */}
+        {/* Salary */}
         {job.salary && job.salary !== "Negotiable" && (
           <div className="mb-2">
             <span className="text-xs font-semibold text-green-700 bg-green-50 px-2 py-1 rounded-lg inline-block break-words max-w-full">
@@ -91,7 +121,7 @@ export default function JobCard({ job }) {
           )}
         </div>
 
-        {/* Description Preview - Limited to 80 chars */}
+        {/* Description Preview */}
         <p className="text-gray-600 text-xs mb-3 flex-1">
           {getShortDescription(job.description)}
         </p>
