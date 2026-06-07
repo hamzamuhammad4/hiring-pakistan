@@ -1,14 +1,14 @@
-// src/app/company/signup/page.js - FULLY FIXED
+// src/app/company/signup/page.js - WITH DUPLICATE CHECKS
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
 import Link from "next/link";
 import toast from 'react-hot-toast';
-import { Briefcase, Building2, User, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Briefcase, Building2, User, Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 
 export default function CompanySignup() {
   const router = useRouter();
@@ -26,6 +26,30 @@ export default function CompanySignup() {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  // ✅ Check if company name already exists
+  const checkCompanyNameExists = async (companyName) => {
+    try {
+      const q = query(collection(db, "companies"), where("companyName", "==", companyName));
+      const snapshot = await getDocs(q);
+      return !snapshot.empty;
+    } catch (error) {
+      console.error("Error checking company name:", error);
+      return false;
+    }
+  };
+
+  // ✅ Check if email already exists in Firestore
+  const checkEmailExistsInFirestore = async (email) => {
+    try {
+      const q = query(collection(db, "companies"), where("email", "==", email));
+      const snapshot = await getDocs(q);
+      return !snapshot.empty;
+    } catch (error) {
+      console.error("Error checking email:", error);
+      return false;
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -49,6 +73,22 @@ export default function CompanySignup() {
     setLoading(true);
     
     try {
+      // ✅ STEP 1: Check if company name already exists
+      const companyNameExists = await checkCompanyNameExists(formData.companyName);
+      if (companyNameExists) {
+        toast.error("❌ This company name is already registered. Please use a different name.");
+        setLoading(false);
+        return;
+      }
+
+      // ✅ STEP 2: Check if email already exists in Firestore
+      const emailExists = await checkEmailExistsInFirestore(formData.email);
+      if (emailExists) {
+        toast.error("❌ This email is already registered. Please use a different email or login.");
+        setLoading(false);
+        return;
+      }
+
       // 1. Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
       const user = userCredential.user;
@@ -56,12 +96,10 @@ export default function CompanySignup() {
       // 2. Send email verification
       await sendEmailVerification(user);
       
-      // ✅ 3. FIXED: Save to BOTH collections with ROLE
-      
-      // 3a. Save to 'users' collection (for auth/role checking)
+      // 3. Save to 'users' collection (for auth/role checking)
       await setDoc(doc(db, "users", user.uid), {
         email: formData.email,
-        role: "company",           // ← CRITICAL: Role set karo
+        role: "company",
         companyName: formData.companyName,
         contactPerson: formData.contactPerson,
         phone: formData.phone || "",
@@ -72,7 +110,7 @@ export default function CompanySignup() {
         updatedAt: new Date()
       });
       
-      // 3b. Save to 'companies' collection (for company-specific data)
+      // 4. Save to 'companies' collection (for company-specific data)
       await setDoc(doc(db, "companies", user.uid), {
         companyName: formData.companyName,
         contactPerson: formData.contactPerson,
@@ -82,20 +120,24 @@ export default function CompanySignup() {
         credits: 0,
         plan: "Basic",
         status: "active",
-        role: "company",           // ← Role yahan bhi set karo
+        role: "company",
         createdAt: new Date(),
         updatedAt: new Date()
       });
       
-      toast.success("Account created! Please verify your email before logging in.");
+      toast.success("✅ Account created! Please verify your email before logging in.");
       router.push("/company/login");
       
     } catch (error) {
       console.error(error);
+      
+      // ✅ Handle Firebase Auth errors
       if (error.code === 'auth/email-already-in-use') {
-        toast.error("Email already registered. Please login.");
+        toast.error("❌ This email is already registered. Please login instead.");
+      } else if (error.code === 'auth/weak-password') {
+        toast.error("Password is too weak. Please use a stronger password.");
       } else {
-        toast.error(error.message || "Registration failed");
+        toast.error(error.message || "Registration failed. Please try again.");
       }
     } finally {
       setLoading(false);
@@ -116,56 +158,127 @@ export default function CompanySignup() {
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Company Name *</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Company Name <span className="text-red-500">*</span>
+            </label>
             <div className="relative">
               <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input type="text" name="companyName" value={formData.companyName} onChange={handleChange} className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg" placeholder="ABC Technologies" required />
+              <input 
+                type="text" 
+                name="companyName" 
+                value={formData.companyName} 
+                onChange={handleChange} 
+                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent" 
+                placeholder="ABC Technologies" 
+                required 
+              />
             </div>
+            <p className="text-xs text-gray-400 mt-1">⚠️ This company name must be unique</p>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Contact Person *</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Contact Person <span className="text-red-500">*</span>
+            </label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input type="text" name="contactPerson" value={formData.contactPerson} onChange={handleChange} className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg" placeholder="Your full name" required />
+              <input 
+                type="text" 
+                name="contactPerson" 
+                value={formData.contactPerson} 
+                onChange={handleChange} 
+                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent" 
+                placeholder="Your full name" 
+                required 
+              />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Company Email *</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Company Email <span className="text-red-500">*</span>
+            </label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input type="email" name="email" value={formData.email} onChange={handleChange} className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg" placeholder="hr@company.com" required />
+              <input 
+                type="email" 
+                name="email" 
+                value={formData.email} 
+                onChange={handleChange} 
+                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent" 
+                placeholder="hr@company.com" 
+                required 
+              />
             </div>
+            <p className="text-xs text-gray-400 mt-1">⚠️ Use a valid email address for verification</p>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Password *</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Password <span className="text-red-500">*</span>
+            </label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange} className="w-full pl-9 pr-9 py-2 text-sm border border-gray-300 rounded-lg" placeholder="Minimum 6 characters" required minLength="6" />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2">
+              <input 
+                type={showPassword ? "text" : "password"} 
+                name="password" 
+                value={formData.password} 
+                onChange={handleChange} 
+                className="w-full pl-9 pr-9 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent" 
+                placeholder="Minimum 6 characters" 
+                required 
+                minLength="6" 
+              />
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)} 
+                className="absolute right-3 top-1/2 -translate-y-1/2"
+              >
                 {showPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
               </button>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Confirm Password *</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Confirm Password <span className="text-red-500">*</span>
+            </label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input type={showPassword ? "text" : "password"} name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg" placeholder="Confirm password" required />
+              <input 
+                type={showPassword ? "text" : "password"} 
+                name="confirmPassword" 
+                value={formData.confirmPassword} 
+                onChange={handleChange} 
+                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent" 
+                placeholder="Confirm password" 
+                required 
+              />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
-              <input type="tel" name="phone" value={formData.phone} onChange={handleChange} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" placeholder="03XXXXXXXXX" />
+              <input 
+                type="tel" 
+                name="phone" 
+                value={formData.phone} 
+                onChange={handleChange} 
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent" 
+                placeholder="03XXXXXXXXX" 
+              />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">City</label>
-              <input type="text" name="city" value={formData.city} onChange={handleChange} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg" placeholder="Karachi" />
+              <input 
+                type="text" 
+                name="city" 
+                value={formData.city} 
+                onChange={handleChange} 
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent" 
+                placeholder="Karachi" 
+              />
             </div>
           </div>
 
@@ -173,7 +286,11 @@ export default function CompanySignup() {
             <p className="text-xs text-blue-800 text-center">⚠️ Start with <strong>0 credits</strong> — buy credits to view CVs.</p>
           </div>
 
-          <button type="submit" disabled={loading} className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 rounded-lg transition text-sm">
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 rounded-lg transition text-sm disabled:opacity-50"
+          >
             {loading ? "Creating Account..." : "Register Company"}
           </button>
         </form>
