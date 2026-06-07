@@ -9,6 +9,41 @@ import Link from "next/link";
 import toast from 'react-hot-toast';
 import { Briefcase, Building2, MapPin, DollarSign, Clock, ArrowLeft, Save, AlertCircle } from "lucide-react";
 
+// ✅ Qualification List - Same as post job page
+const qualifications = [
+  "Matriculation (10th)",
+  "Intermediate (12th/FSc/FA/ICS)",
+  "Bachelor's (14 years)",
+  "Bachelor of Arts (BA)",
+  "Bachelor of Science (BSc)",
+  "Bachelor of Commerce (BCom)",
+  "Bachelor of Business Administration (BBA)",
+  "Bachelor of Computer Science (BCS)",
+  "Bachelor of Information Technology (BIT)",
+  "Bachelor of Engineering (BE)",
+  "Bachelor of Technology (BTech)",
+  "Master's (16 years)",
+  "Master of Arts (MA)",
+  "Master of Science (MSc)",
+  "Master of Commerce (MCom)",
+  "Master of Business Administration (MBA)",
+  "Master of Computer Science (MCS)",
+  "Master of Information Technology (MIT)",
+  "Master of Engineering (ME)",
+  "Master of Technology (MTech)",
+  "MS/ M.Phil",
+  "PhD/ Doctorate",
+  "Diploma (2 years)",
+  "Diploma of Associate Engineering (DAE)",
+  "Certificate",
+  "Short Course",
+  "Other"
+];
+
+const jobTypes = ["Full Time", "Part Time", "Contract", "Internship", "Remote"];
+const salaryTypes = ["hourly", "daily", "weekly", "monthly", "yearly"];
+const shifts = ["Morning", "Evening", "Night", "Rotational", "Flexible"];
+
 export default function EditJobPage() {
   const router = useRouter();
   const { id } = useParams();
@@ -98,7 +133,6 @@ export default function EditJobPage() {
     
     // For contact field - only allow numbers
     if (name === "contact") {
-      // Remove any non-digit characters
       const numbersOnly = value.replace(/\D/g, '');
       newValue = numbersOnly;
       setFormData(prev => ({ ...prev, [name]: newValue }));
@@ -139,7 +173,6 @@ export default function EditJobPage() {
     if (!formData.description.trim()) newErrors.description = "Job description is required";
     if (!formData.requirements.trim()) newErrors.requirements = "Requirements are required";
     
-    // Validate contact number if provided
     if (formData.contact && formData.contact.length < 10) {
       newErrors.contact = "Please enter a valid phone number (at least 10 digits)";
     }
@@ -202,7 +235,7 @@ export default function EditJobPage() {
         qualification: formData.qualification || null,
         shift: formData.shift,
         vacancies: formData.vacancies || null,
-        status: "pending", // Reset to pending for admin review
+        status: "pending",
         updatedAt: serverTimestamp(),
       });
 
@@ -216,10 +249,6 @@ export default function EditJobPage() {
       setSaving(false);
     }
   };
-
-  const jobTypes = ["Full Time", "Part Time", "Contract", "Internship", "Remote"];
-  const salaryTypes = ["hourly", "daily", "weekly", "monthly", "yearly"];
-  const shifts = ["Morning", "Evening", "Night", "Rotational", "Flexible"];
 
   if (loading) {
     return (
@@ -276,17 +305,12 @@ export default function EditJobPage() {
                     type="text"
                     name="companyName"
                     value={formData.companyName}
-                    onChange={handleChange}
                     disabled
-                    className={`w-full px-4 py-3 border rounded-xl bg-gray-100 cursor-not-allowed ${errors.companyName ? 'border-red-500' : 'border-gray-300'}`}
-                    placeholder="Your Company Name"
+                    className="w-full px-4 py-3 border rounded-xl bg-gray-100 cursor-not-allowed border-gray-300"
                   />
                   <Building2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Company name is automatically fetched from your profile
-                </p>
-                {errors.companyName && <p className="text-red-500 text-xs mt-1">{errors.companyName}</p>}
+                <p className="text-xs text-gray-500 mt-1">Company name is automatically fetched from your profile</p>
               </div>
 
               <div>
@@ -393,19 +417,30 @@ export default function EditJobPage() {
               </div>
             </div>
 
-            {/* Additional Details */}
+            {/* ✅ Additional Details - Qualification as Dropdown */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* ✅ Qualification Dropdown - FIXED */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Qualification</label>
-                <input
-                  type="text"
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Qualification <span className="text-red-500">*</span>
+                </label>
+                <select
                   name="qualification"
                   value={formData.qualification}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl"
-                  placeholder="e.g., Bachelor's in Computer Science"
-                />
+                  required
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-500"
+                >
+                  <option value="">Select Qualification</option>
+                  {qualifications.map((qual) => (
+                    <option key={qual} value={qual}>
+                      {qual}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">Select the minimum required qualification</p>
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Shift</label>
                 <select
@@ -417,6 +452,7 @@ export default function EditJobPage() {
                   {shifts.map(shift => <option key={shift} value={shift}>{shift}</option>)}
                 </select>
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Number of Vacancies</label>
                 <input
@@ -428,6 +464,7 @@ export default function EditJobPage() {
                   placeholder="e.g., 5"
                 />
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Contact Number (for CVs)</label>
                 <input
