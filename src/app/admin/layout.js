@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 import { 
   LayoutDashboard, Building2, Briefcase, FileText, 
   CreditCard, AlertTriangle, Newspaper, Settings, 
-  LogOut, CheckCircle, Menu, X, Layers
+  LogOut, CheckCircle, Menu, X, Layers, Mail
 } from "lucide-react";
 
 const adminEmails = [
@@ -24,16 +24,14 @@ export default function AdminLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // ✅ Add a style to hide footer when admin layout is mounted
+  // Hide footer when admin layout is mounted
   useEffect(() => {
-    // Hide footer when admin page loads
     const footer = document.querySelector('footer');
     if (footer) {
       footer.style.display = 'none';
     }
     
     return () => {
-      // Show footer again when leaving admin page
       const footer = document.querySelector('footer');
       if (footer) {
         footer.style.display = 'block';
@@ -89,6 +87,7 @@ export default function AdminLayout({ children }) {
     { path: "/admin/payments", label: "Payments", icon: CreditCard },
     { path: "/admin/complaints", label: "Complaints", icon: AlertTriangle },
     { path: "/admin/blogs", label: "Blogs", icon: Newspaper },
+    { path: "/admin/newsletter", label: "Newsletter", icon: Mail }, // ✅ NEW
     { path: "/admin/settings", label: "Settings", icon: Settings },
   ];
 
