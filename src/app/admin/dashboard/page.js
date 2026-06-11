@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import { 
   collection, getDocs, query, where, 
   doc, getDoc, orderBy, limit 
@@ -25,6 +25,7 @@ import {
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [adminEmail, setAdminEmail] = useState(null);
   const [stats, setStats] = useState({
     totalCompanies: 0,
     totalJobs: 0,
@@ -48,9 +49,19 @@ export default function AdminDashboard() {
     { month: 'Jun', jobs: 0 }
   ]);
 
+  // Get current admin email
   useEffect(() => {
-    fetchDashboardData();
+    const user = auth.currentUser;
+    if (user) {
+      setAdminEmail(user.email);
+    }
   }, []);
+
+  useEffect(() => {
+    if (adminEmail !== null) {
+      fetchDashboardData();
+    }
+  }, [adminEmail]);
 
   const fetchDashboardData = async () => {
     try {
@@ -69,10 +80,15 @@ export default function AdminDashboard() {
       };
 
       // Get all data safely
-      const companies = await getCollectionData("companies");
+      let companies = await getCollectionData("companies");
       const jobs = await getCollectionData("jobs");
       const applications = await getCollectionData("applications");
       const complaints = await getCollectionData("complaints");
+
+      // ✅ FILTER OUT ADMIN COMPANY - don't count admin's own company
+      if (adminEmail) {
+        companies = companies.filter(company => company.email !== adminEmail);
+      }
 
       // Calculate stats
       const pendingJobsCount = jobs.filter(j => j.status === 'pending').length;
@@ -93,7 +109,7 @@ export default function AdminDashboard() {
         totalEarnings: 2500 // Example - will be from payments collection
       });
 
-      // Recent companies (last 5)
+      // Recent companies (last 5) - filtered out admin company
       const sortedCompanies = [...companies].sort((a, b) => 
         (b.createdAt?.toDate?.() || 0) - (a.createdAt?.toDate?.() || 0)
       ).slice(0, 5);
@@ -199,10 +215,10 @@ export default function AdminDashboard() {
         />
         <StatCard 
           title="Total Earnings" 
-  value={`PKR ${stats.totalEarnings.toLocaleString()}`}  // ← ₹ ki jagah Rs
-  icon={DollarSign}
-  color="bg-amber-500 text-white"
-  bgColor="bg-amber-50"
+          value={`PKR ${stats.totalEarnings.toLocaleString()}`}
+          icon={DollarSign}
+          color="bg-amber-500 text-white"
+          bgColor="bg-amber-50"
         />
       </div>
 

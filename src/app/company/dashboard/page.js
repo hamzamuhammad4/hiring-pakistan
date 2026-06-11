@@ -39,7 +39,8 @@ import {
   XCircle,
   Loader2,
   Mail,
-  RefreshCw
+  RefreshCw,
+  Phone
 } from "lucide-react";
 
 export default function CompanyDashboard() {
@@ -50,6 +51,7 @@ export default function CompanyDashboard() {
   const [error, setError] = useState("");
   const [companyData, setCompanyData] = useState({ credits: 0, plan: 'Basic' });
   const [recentApps, setRecentApps] = useState([]);
+  const [rejectedApps, setRejectedApps] = useState([]); // ✅ NEW: Rejected applications
   const [emailVerified, setEmailVerified] = useState(false);
   const [sendingVerification, setSendingVerification] = useState(false);
   
@@ -60,12 +62,12 @@ export default function CompanyDashboard() {
     pending: 0,
     reviewed: 0,
     shortlisted: 0,
+    rejected: 0,  // ✅ NEW: Rejected count
     totalViews: 0
   });
 
   const prevAppCountRef = useRef(0);
 
- 
   const formatSalary = (salary) => {
     if (!salary) return "Negotiable";
     return salary.replace(/\$/g, 'PKR');
@@ -161,6 +163,7 @@ export default function CompanyDashboard() {
           totalViews: totalViews
         }));
 
+        // ✅ Real-time applications listener
         const unsubscribeApps = onSnapshot(collection(db, "applications"), (snapshot) => {
           const allApps = snapshot.docs.map((doc) => ({
             id: doc.id,
@@ -178,19 +181,31 @@ export default function CompanyDashboard() {
           }
           prevAppCountRef.current = currentCount;
 
+          // ✅ Update stats with rejected count
           setStats((prev) => ({
             ...prev,
             totalApplications: currentCount,
             pending: companyApps.filter((app) => app.status === "pending").length,
             reviewed: companyApps.filter((app) => app.status === "reviewed").length,
             shortlisted: companyApps.filter((app) => app.status === "shortlisted").length,
+            rejected: companyApps.filter((app) => app.status === "rejected" || app.cvStatus === "rejected").length,
           }));
 
-          const sorted = companyApps.sort((a, b) => 
+          // Recent applications (pending/shortlisted/reviewed)
+          const recent = companyApps.filter(app => 
+            app.status === "pending" || app.status === "reviewed" || app.status === "shortlisted"
+          ).sort((a, b) => 
             new Date(b.appliedAt?.toDate?.() || 0) - new Date(a.appliedAt?.toDate?.() || 0)
           ).slice(0, 5);
           
-          Promise.all(sorted.map(async (app) => {
+          // ✅ Rejected applications
+          const rejected = companyApps.filter(app => 
+            app.status === "rejected" || app.cvStatus === "rejected"
+          ).sort((a, b) => 
+            new Date(b.appliedAt?.toDate?.() || 0) - new Date(a.appliedAt?.toDate?.() || 0)
+          ).slice(0, 5);
+          
+          Promise.all(recent.map(async (app) => {
             try {
               const jobDoc = await getDoc(doc(db, "jobs", app.jobId));
               return {
@@ -201,6 +216,18 @@ export default function CompanyDashboard() {
               return { ...app, jobTitle: 'Unknown Job' };
             }
           })).then(setRecentApps);
+          
+          Promise.all(rejected.map(async (app) => {
+            try {
+              const jobDoc = await getDoc(doc(db, "jobs", app.jobId));
+              return {
+                ...app,
+                jobTitle: jobDoc.exists() ? jobDoc.data().title : 'Unknown Job'
+              };
+            } catch (err) {
+              return { ...app, jobTitle: 'Unknown Job' };
+            }
+          })).then(setRejectedApps);
         });
 
         return () => unsubscribeApps();
@@ -313,12 +340,12 @@ export default function CompanyDashboard() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 bg-white rounded-2xl shadow-lg p-6">
           <div>
             <div className="flex items-center gap-2 mb-2">
-  <Building2 className="h-8 w-8 text-cyan-600" />
-  <h1 className="text-4xl font-bold text-gray-800">
-    {companyData?.companyName || "Company"} Dashboard
-  </h1>
-</div>
-<p className="text-gray-500">Welcome back, {auth.currentUser?.email}</p>
+              <Building2 className="h-8 w-8 text-cyan-600" />
+              <h1 className="text-4xl font-bold text-gray-800">
+                {companyData?.companyName || "Company"} Dashboard
+              </h1>
+            </div>
+            <p className="text-gray-500">Welcome back, {auth.currentUser?.email}</p>
             {auth.currentUser?.emailVerified && (
               <span className="inline-flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full mt-1">
                 <CheckCircle className="h-3 w-3" /> Verified
@@ -346,7 +373,7 @@ export default function CompanyDashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-4 mb-8">
           <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl shadow-lg p-4 text-white">
             <Briefcase className="h-7 w-7 mb-2 opacity-90" />
             <h3 className="text-2xl font-bold">{stats.activeJobs}</h3>
@@ -376,6 +403,12 @@ export default function CompanyDashboard() {
             <Star className="h-7 w-7 mb-2 opacity-90" />
             <h3 className="text-2xl font-bold">{stats.shortlisted}</h3>
             <p className="text-xs text-purple-100">Shortlisted</p>
+          </div>
+          {/* ✅ NEW: Rejected Card */}
+          <div className="bg-gradient-to-br from-red-500 to-red-700 rounded-2xl shadow-lg p-4 text-white">
+            <XCircle className="h-7 w-7 mb-2 opacity-90" />
+            <h3 className="text-2xl font-bold">{stats.rejected}</h3>
+            <p className="text-xs text-red-100">Rejected</p>
           </div>
           <div className="bg-gradient-to-br from-pink-500 to-pink-700 rounded-2xl shadow-lg p-4 text-white">
             <TrendingUp className="h-7 w-7 mb-2 opacity-90" />
@@ -422,10 +455,10 @@ export default function CompanyDashboard() {
                         </span>
                       )}
                       {job.salary && (
-  <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 text-xs px-3 py-1.5 rounded-lg font-medium">
-    {formatSalary(job.salary)}
-  </span>
-)}
+                        <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 text-xs px-3 py-1.5 rounded-lg font-medium">
+                          {formatSalary(job.salary)}
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
@@ -439,6 +472,63 @@ export default function CompanyDashboard() {
                         <Trash2 className="h-3.5 w-3.5" /> Delete
                       </button>
                     </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ✅ NEW: Rejected Applications Section */}
+        {rejectedApps.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <XCircle className="h-6 w-6 text-red-600" />
+              <h2 className="text-2xl font-bold text-gray-800">Rejected Applications</h2>
+              <span className="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full">{rejectedApps.length} total</span>
+            </div>
+            <div className="bg-red-50 border-l-4 border-red-500 rounded-xl p-4 mb-4">
+              <p className="text-sm text-red-800 flex items-center gap-2">
+                <XCircle className="h-4 w-4" />
+                Applications that have been rejected. You can review them here.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {rejectedApps.map((app) => (
+                <div key={app.id} className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-red-500 overflow-hidden">
+                  <div className="p-5">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h3 className="font-bold text-lg text-gray-800">{app.name || "Candidate"}</h3>
+                        <p className="text-sm text-gray-500 mt-0.5">Applied for: {app.jobTitle}</p>
+                      </div>
+                      <span className="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full font-medium flex items-center gap-1">
+                        <XCircle className="h-3 w-3" /> Rejected
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-3 mb-3">
+                      {app.email && (
+                        <span className="inline-flex items-center gap-1 bg-gray-50 text-gray-700 text-xs px-3 py-1.5 rounded-lg font-medium">
+                          <Mail className="h-3 w-3" /> {app.email}
+                        </span>
+                      )}
+                      {app.phone && (
+                        <span className="inline-flex items-center gap-1 bg-gray-50 text-gray-700 text-xs px-3 py-1.5 rounded-lg font-medium">
+                          <Phone className="h-3 w-3" /> {app.phone}
+                        </span>
+                      )}
+                    </div>
+                    {app.cvRejectionReason && (
+                      <div className="mt-2 bg-red-50 p-2 rounded-lg">
+                        <p className="text-xs text-red-700">
+                          <strong>Rejection Reason:</strong> {app.cvRejectionReason}
+                        </p>
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-400 mt-3 flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      Applied: {app.appliedAt?.toDate?.()?.toLocaleDateString() || "Recent"}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -511,9 +601,9 @@ export default function CompanyDashboard() {
                         <MapPin className="h-3 w-3" /> {job.location || "Pakistan"}
                       </span>
                       <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs">{job.type || "Full Time"}</span>
-                     <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold">
-  {formatSalary(job.salary) || "Negotiable"}
-</span>
+                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold">
+                        {formatSalary(job.salary) || "Negotiable"}
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm text-gray-500 mb-4">
                       <span className="flex items-center gap-1"><Users className="h-4 w-4" /> {job.applicantsCount || 0} applicants</span>

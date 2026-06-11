@@ -1,4 +1,4 @@
-// src/app/company/signup/page.js - WITH DUPLICATE CHECKS
+// src/app/company/signup/page.js - WITH ADMIN EMAIL PREVENTION
 "use client";
 
 import { useState } from "react";
@@ -9,6 +9,12 @@ import { doc, setDoc, collection, query, where, getDocs } from "firebase/firesto
 import Link from "next/link";
 import toast from 'react-hot-toast';
 import { Briefcase, Building2, User, Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
+
+
+const ADMIN_EMAILS = [
+  "firebasehiringpakistan@gmail.com",
+  "hamzaayyub125@gmail.com",
+];
 
 export default function CompanySignup() {
   const router = useRouter();
@@ -28,7 +34,7 @@ export default function CompanySignup() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // ✅ Check if company name already exists
+  // Check if company name already exists
   const checkCompanyNameExists = async (companyName) => {
     try {
       const q = query(collection(db, "companies"), where("companyName", "==", companyName));
@@ -40,7 +46,7 @@ export default function CompanySignup() {
     }
   };
 
-  // ✅ Check if email already exists in Firestore
+  // Check if email already exists in Firestore
   const checkEmailExistsInFirestore = async (email) => {
     try {
       const q = query(collection(db, "companies"), where("email", "==", email));
@@ -60,6 +66,11 @@ export default function CompanySignup() {
       return;
     }
     
+    if (ADMIN_EMAILS.includes(formData.email)) {
+      toast.error("❌ This email cannot register as a company. Please use a different email.");
+      return;
+    }
+    
     if (formData.password !== formData.confirmPassword) {
       toast.error("Passwords do not match");
       return;
@@ -73,7 +84,7 @@ export default function CompanySignup() {
     setLoading(true);
     
     try {
-      // ✅ STEP 1: Check if company name already exists
+      // STEP 1: Check if company name already exists
       const companyNameExists = await checkCompanyNameExists(formData.companyName);
       if (companyNameExists) {
         toast.error("❌ This company name is already registered. Please use a different name.");
@@ -81,7 +92,7 @@ export default function CompanySignup() {
         return;
       }
 
-      // ✅ STEP 2: Check if email already exists in Firestore
+      // STEP 2: Check if email already exists in Firestore
       const emailExists = await checkEmailExistsInFirestore(formData.email);
       if (emailExists) {
         toast.error("❌ This email is already registered. Please use a different email or login.");
@@ -131,7 +142,7 @@ export default function CompanySignup() {
     } catch (error) {
       console.error(error);
       
-      // ✅ Handle Firebase Auth errors
+      // Handle Firebase Auth errors
       if (error.code === 'auth/email-already-in-use') {
         toast.error("❌ This email is already registered. Please login instead.");
       } else if (error.code === 'auth/weak-password') {

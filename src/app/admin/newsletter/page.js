@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 import { 
   Mail, Trash2, Download, RefreshCw, 
   AlertTriangle, CheckCircle, Users, Send,
-  Search, Eye, EyeOff
+  Search, Eye, EyeOff, Calendar
 } from "lucide-react";
 
 export default function AdminNewsletter() {
@@ -24,6 +24,23 @@ export default function AdminNewsletter() {
   useEffect(() => {
     fetchSubscribers();
   }, []);
+
+  // Format date and time function
+  const formatDateTime = (date) => {
+    if (!date) return "N/A";
+    
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'pm' : 'am';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    
+    return `${day}/${month}/${year}, ${hours}:${minutes} ${ampm}`;
+  };
 
   const fetchSubscribers = async () => {
     try {
@@ -65,7 +82,7 @@ export default function AdminNewsletter() {
     const headers = ["Email", "Subscribed Date", "Status"];
     const csvData = subscribers.map(s => [
       s.email,
-      new Date(s.subscribedAt).toLocaleDateString(),
+      formatDateTime(s.subscribedAt),
       s.status || "active"
     ]);
     
@@ -109,7 +126,7 @@ export default function AdminNewsletter() {
     <div>
       <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">📧 Newsletter Subscribers</h1>
+          <h1 className="text-3xl font-bold text-gray-800">Newsletter Subscribers</h1>
           <p className="text-gray-500 mt-1">Manage your email newsletter list</p>
         </div>
         <div className="flex gap-3">
@@ -197,9 +214,11 @@ export default function AdminNewsletter() {
                         <span className="font-medium text-gray-800">{subscriber.email}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {new Date(subscriber.subscribedAt).toLocaleDateString()} at {' '}
-                      {new Date(subscriber.subscribedAt).toLocaleTimeString()}
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md text-sm text-gray-600">
+                        <Calendar className="h-3.5 w-3.5 text-gray-500" />
+                        {formatDateTime(subscriber.subscribedAt)}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 rounded-full text-xs ${
@@ -210,8 +229,10 @@ export default function AdminNewsletter() {
                         {subscriber.status === 'active' ? 'Active' : 'Unsubscribed'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {subscriber.source || 'Footer'}
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center px-2 py-1 bg-gray-100 rounded-md text-xs text-gray-600">
+                        {subscriber.source || 'Footer'}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <button
@@ -230,21 +251,6 @@ export default function AdminNewsletter() {
         )}
       </div>
 
-      {/* Send Newsletter Button */}
-      <div className="mt-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl p-6 text-white">
-        <div className="flex justify-between items-center flex-wrap gap-4">
-          <div>
-            <h3 className="text-xl font-bold">Send Newsletter</h3>
-            <p className="text-purple-100 text-sm mt-1">Send emails to all {stats.total} subscribers</p>
-          </div>
-          <button 
-            onClick={() => window.location.href = '/admin/newsletter/send'}
-            className="bg-white text-purple-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition flex items-center gap-2"
-          >
-            <Send className="h-4 w-4" /> Compose Email
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

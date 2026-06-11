@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 import { 
   FileText, Search, CheckCircle, XCircle, 
   Eye, Trash2, Clock, User, Mail, Phone, MapPin,
-  Download, Filter, Briefcase
+  Download, Filter, Briefcase, Calendar
 } from "lucide-react";
 
 export default function AdminCVs() {
@@ -33,7 +33,6 @@ export default function AdminCVs() {
       const appsSnap = await getDocs(collection(db, "applications"));
       const appsList = await Promise.all(appsSnap.docs.map(async (docSnap) => {
         const data = docSnap.data();
-        // Get job title - better error handling
         let jobTitle = 'Unknown Job';
         let jobExists = false;
         
@@ -45,11 +44,9 @@ export default function AdminCVs() {
               jobTitle = jobData.title || 'Unknown Job';
               jobExists = true;
             } else {
-              console.warn(`Job not found for ID: ${data.jobId}`);
               jobTitle = 'Job Not Found (Deleted)';
             }
           } else {
-            console.warn('No jobId found in application:', docSnap.id);
             jobTitle = 'No Job ID Specified';
           }
         } catch (err) {
@@ -66,9 +63,7 @@ export default function AdminCVs() {
         };
       }));
       
-      // Sort by applied date (newest first)
       appsList.sort((a, b) => b.appliedAt - a.appliedAt);
-      
       setApplications(appsList);
       
       setStats({
@@ -84,6 +79,23 @@ export default function AdminCVs() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // ✅ Format date and time function
+  const formatDateTime = (date) => {
+    if (!date) return "N/A";
+    
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'pm' : 'am';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    
+    return `${day}/${month}/${year}, ${hours}:${minutes} ${ampm}`;
   };
 
   const handleApprove = async (appId) => {
@@ -206,8 +218,8 @@ export default function AdminCVs() {
                 <span>{app.city || 'N/A'}</span>
               </div>
               <div className="flex items-center gap-2 text-gray-600">
-                <Clock className="h-4 w-4" /> 
-                <span>Applied: {app.appliedAt?.toLocaleDateString()}</span>
+                <Calendar className="h-4 w-4" /> 
+                <span>Applied: {formatDateTime(app.appliedAt)}</span>
               </div>
             </div>
             
@@ -334,8 +346,10 @@ export default function AdminCVs() {
                           <span className="flex items-center gap-1 text-sm text-gray-500">
                             <Mail className="h-4 w-4" /> {app.email}
                           </span>
-                          <span className="flex items-center gap-1 text-sm text-gray-500">
-                            <Clock className="h-4 w-4" /> {app.appliedAt?.toLocaleDateString()}
+                          {/* ✅ Date and Time with Grey Background Highlight - Like Screenshot */}
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md text-sm text-gray-600">
+                            <Calendar className="h-3.5 w-3.5 text-gray-500" />
+                            {formatDateTime(app.appliedAt)}
                           </span>
                         </div>
                       </div>

@@ -12,7 +12,7 @@ import toast from 'react-hot-toast';
 import { 
   Briefcase, Search, CheckCircle, XCircle, 
   Eye, Trash2, Clock, Building2, MapPin,
-  Filter, ExternalLink, AlertTriangle, RefreshCw, Edit
+  Filter, ExternalLink, AlertTriangle, RefreshCw, Edit, Calendar
 } from "lucide-react";
 import Link from "next/link";
 
@@ -36,7 +36,8 @@ export default function AdminJobs() {
       
       let jobsList = [];
       try {
-        const jobsSnap = await getDocs(collection(db, "jobs"));
+        // ✅ ADDED SORTING: orderBy createdAt descending (newest first)
+        const jobsSnap = await getDocs(query(collection(db, "jobs"), orderBy("createdAt", "desc")));
         jobsList = jobsSnap.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
@@ -62,6 +63,23 @@ export default function AdminJobs() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Format date and time function
+  const formatDateTime = (date) => {
+    if (!date) return "N/A";
+    
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'pm' : 'am';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    
+    return `${day}/${month}/${year}, ${hours}:${minutes} ${ampm}`;
   };
 
   const handleApprove = async (jobId) => {
@@ -156,23 +174,16 @@ export default function AdminJobs() {
   const formatSalary = (salary) => {
     if (!salary) return "Negotiable";
     
-    // If salary is already a string with PKR, return as is
     if (typeof salary === 'string' && salary.includes('PKR')) {
       return salary;
     }
     
-    // Handle numeric salary
     if (typeof salary === 'number') {
       return `PKR ${salary.toLocaleString()}`;
     }
     
-    // Handle string salary without currency
     let salaryStr = String(salary);
-    
-    // Remove any existing currency symbols ($, £, €, etc.)
     salaryStr = salaryStr.replace(/[$£€]/g, '');
-    
-    // Add PKR prefix
     return `PKR ${salaryStr.trim()}`;
   };
 
@@ -242,19 +253,19 @@ export default function AdminJobs() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-gray-50 rounded-xl p-4 text-center">
+        <div className="bg-gray-50 rounded-xl p-4 text-center border border-gray-200">
           <p className="text-2xl font-bold text-gray-800">{stats.total}</p>
           <p className="text-sm text-gray-500">Total Jobs</p>
         </div>
-        <div className="bg-yellow-50 rounded-xl p-4 text-center">
+        <div className="bg-yellow-50 rounded-xl p-4 text-center border border-yellow-200">
           <p className="text-2xl font-bold text-yellow-700">{stats.pending}</p>
           <p className="text-sm text-yellow-600">Pending</p>
         </div>
-        <div className="bg-green-50 rounded-xl p-4 text-center">
+        <div className="bg-green-50 rounded-xl p-4 text-center border border-green-200">
           <p className="text-2xl font-bold text-green-700">{stats.approved}</p>
           <p className="text-sm text-green-600">Approved</p>
         </div>
-        <div className="bg-red-50 rounded-xl p-4 text-center">
+        <div className="bg-red-50 rounded-xl p-4 text-center border border-red-200">
           <p className="text-2xl font-bold text-red-700">{stats.rejected}</p>
           <p className="text-sm text-red-600">Rejected</p>
         </div>
@@ -298,7 +309,7 @@ export default function AdminJobs() {
         </div>
       </div>
 
-      {/* Jobs List */}
+      {/* Jobs List - Sorted by newest first */}
       {jobs.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
           <Briefcase className="h-12 w-12 text-gray-300 mx-auto mb-3" />
@@ -330,13 +341,13 @@ export default function AdminJobs() {
                             <MapPin className="h-4 w-4" />
                             {job.location || 'Karachi'}
                           </span>
-                          {/* DollarSign icon removed from salary display */}
                           <span className="flex items-center gap-1 text-sm text-gray-500">
                             {formatSalary(job.salary)}
                           </span>
-                          <span className="flex items-center gap-1 text-sm text-gray-500">
-                            <Clock className="h-4 w-4" />
-                            Posted: {job.createdAt?.toLocaleDateString() || 'N/A'}
+                          {/* Date and Time with Grey Background Highlight */}
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md text-sm text-gray-600">
+                            <Calendar className="h-3.5 w-3.5 text-gray-500" />
+                            {formatDateTime(job.createdAt)}
                           </span>
                         </div>
                       </div>
@@ -366,7 +377,7 @@ export default function AdminJobs() {
                       </div>
                     )}
 
-                    {/* ALL BUTTONS SAME SIZE - WITH ADMIN PREVIEW LINK */}
+                    {/* ALL BUTTONS SAME SIZE */}
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => handleEdit(job.id)}

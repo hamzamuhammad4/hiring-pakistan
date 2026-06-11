@@ -110,9 +110,9 @@ export default function AdminSubscriptions() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0 }}>📋 Subscription Plans</h1>
+          <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0 }}>Subscription Plans</h1>
           <p style={{ color: '#6b7280', marginTop: '4px' }}>Manage pricing plans and credit packages</p>
-          <p style={{ fontSize: '12px', color: '#16a34a', marginTop: '4px' }}>✅ {plans.length} plan(s) found</p>
+          <p style={{ fontSize: '12px', color: '#16a34a', marginTop: '4px' }}> {plans.length} plan(s) found</p>
         </div>
         <Link href="/admin/subscriptions/add" style={{ backgroundColor: '#0891b2', color: 'white', padding: '10px 20px', borderRadius: '8px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Plus style={{ width: '16px', height: '16px' }} /> Add New Plan

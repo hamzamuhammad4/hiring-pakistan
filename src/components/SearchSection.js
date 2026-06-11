@@ -17,7 +17,7 @@ function SearchSectionContent() {
     "Data Science / AI", "DevOps / Cloud", "Cyber Security", "Network Engineering", "Other"
   ];
 
-  // Load filters from URL on mount
+  // Load filters from URL on mount (for when coming back from search page)
   useEffect(() => {
     const category = searchParams.get('category');
     const search = searchParams.get('search');
@@ -30,44 +30,38 @@ function SearchSectionContent() {
     }
   }, [searchParams]);
 
-  // Update URL when filters change
-  const updateFilters = (category, search) => {
-    const params = new URLSearchParams();
-    if (category && category !== 'All') {
-      params.set('category', category);
-    }
-    if (search && search.trim()) {
-      params.set('search', search.trim());
-    }
-    
-    router.push(`/?${params.toString()}`, { scroll: false });
-  };
-
   const handleSearch = (e) => {
     e.preventDefault();
-    updateFilters(selectedCategory, searchTerm);
+    
+    // Build query params for search page
+    const params = new URLSearchParams();
+    if (selectedCategory && selectedCategory !== 'All') {
+      params.set('category', selectedCategory);
+    }
+    if (searchTerm && searchTerm.trim()) {
+      params.set('q', searchTerm.trim());
+    }
+    
+    // Redirect to search page
+    router.push(`/search?${params.toString()}`);
   };
 
   const handleCategoryChange = (e) => {
     const newCategory = e.target.value;
     setSelectedCategory(newCategory);
-    updateFilters(newCategory, searchTerm);
+    // Don't auto-search, just update state
   };
 
   const handleSearchTermChange = (e) => {
     const newSearch = e.target.value;
     setSearchTerm(newSearch);
-    // Debounced update
-    const timer = setTimeout(() => {
-      updateFilters(selectedCategory, newSearch);
-    }, 500);
-    return () => clearTimeout(timer);
+    // Don't auto-search, just update state
   };
 
   const clearFilters = () => {
     setSearchTerm("");
     setSelectedCategory("All");
-    router.push('/', { scroll: false });
+    router.push('/search');
   };
 
   return (

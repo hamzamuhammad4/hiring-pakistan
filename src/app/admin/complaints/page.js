@@ -10,7 +10,7 @@ import {
 import toast from 'react-hot-toast';
 import { 
   AlertTriangle, Search, CheckCircle, XCircle,
-  Eye, Trash2, Clock, Building2, RefreshCw, Image as ImageIcon, FileText, X
+  Eye, Trash2, Clock, Building2, RefreshCw, Image as ImageIcon, FileText, X, Calendar
 } from "lucide-react";
 import Link from "next/link";
 
@@ -30,6 +30,23 @@ export default function AdminComplaints() {
   useEffect(() => {
     fetchComplaints();
   }, []);
+
+  // ✅ Format date and time function
+  const formatDateTime = (date) => {
+    if (!date) return "N/A";
+    
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'pm' : 'am';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    
+    return `${day}/${month}/${year}, ${hours}:${minutes} ${ampm}`;
+  };
 
   const fetchComplaints = async () => {
     try {
@@ -132,12 +149,10 @@ export default function AdminComplaints() {
     return colors[priority] || 'bg-gray-100 text-gray-700';
   };
 
-  // Get attachment URL (supports multiple field names)
   const getAttachmentUrl = (complaint) => {
     return complaint.attachment || complaint.attachmentUrl || complaint.image || complaint.screenshot || null;
   };
 
-  // Check if attachment is an image
   const isImage = (url) => {
     if (!url) return false;
     const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
@@ -171,51 +186,82 @@ export default function AdminComplaints() {
         <p className="text-gray-500 mt-1">Manage and resolve company complaints</p>
       </div>
 
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-gray-50 rounded-xl p-6 text-center">
+        <div className="bg-gray-50 rounded-xl p-6 text-center border border-gray-200">
           <p className="text-3xl font-bold text-gray-800">{stats.total}</p>
           <p className="text-gray-500">Total Complaints</p>
         </div>
-        <div className="bg-yellow-50 rounded-xl p-6 text-center">
+        <div className="bg-yellow-50 rounded-xl p-6 text-center border border-yellow-200">
           <p className="text-3xl font-bold text-yellow-700">{stats.pending}</p>
           <p className="text-yellow-600">Pending</p>
         </div>
-        <div className="bg-green-50 rounded-xl p-6 text-center">
+        <div className="bg-green-50 rounded-xl p-6 text-center border border-green-200">
           <p className="text-3xl font-bold text-green-700">{stats.resolved}</p>
           <p className="text-green-600">Resolved</p>
         </div>
       </div>
 
+      {/* Filters */}
       <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
         <div className="flex flex-wrap gap-2">
-          <button onClick={() => setFilter('all')} className={`px-4 py-2 rounded-lg ${filter === 'all' ? 'bg-cyan-600 text-white' : 'bg-gray-100'}`}>All ({stats.total})</button>
-          <button onClick={() => setFilter('pending')} className={`px-4 py-2 rounded-lg ${filter === 'pending' ? 'bg-yellow-500 text-white' : 'bg-gray-100'}`}>Pending ({stats.pending})</button>
-          <button onClick={() => setFilter('resolved')} className={`px-4 py-2 rounded-lg ${filter === 'resolved' ? 'bg-green-600 text-white' : 'bg-gray-100'}`}>Resolved ({stats.resolved})</button>
-          <button onClick={fetchComplaints} className="px-4 py-2 rounded-lg bg-gray-100 ml-auto flex items-center gap-2"><RefreshCw className="h-4 w-4" /> Refresh</button>
+          <button onClick={() => setFilter('all')} className={`px-4 py-2 rounded-lg transition ${filter === 'all' ? 'bg-cyan-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>All ({stats.total})</button>
+          <button onClick={() => setFilter('pending')} className={`px-4 py-2 rounded-lg transition ${filter === 'pending' ? 'bg-yellow-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Pending ({stats.pending})</button>
+          <button onClick={() => setFilter('resolved')} className={`px-4 py-2 rounded-lg transition ${filter === 'resolved' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Resolved ({stats.resolved})</button>
+          <button onClick={fetchComplaints} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 ml-auto flex items-center gap-2 transition"><RefreshCw className="h-4 w-4" /> Refresh</button>
         </div>
       </div>
 
+      {/* Complaints List */}
       {complaints.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
           <AlertTriangle className="h-12 w-12 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500">No complaints yet</p>
+          <p className="text-sm text-gray-400 mt-2">Complaints will appear here when users submit them</p>
         </div>
       ) : (
         <div className="space-y-4">
           {filteredComplaints.map((complaint) => (
-            <div key={complaint.id} className="bg-white rounded-2xl shadow-lg p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-bold text-lg">{complaint.title}</h3>
-                  <p className="text-sm text-gray-500">{complaint.companyEmail}</p>
-                  <div className="flex gap-2 mt-2">
-                    <span className={`text-xs px-2 py-1 rounded-full ${getPriorityColor(complaint.priority)}`}>{complaint.priority || 'medium'}</span>
-                    <span className="text-xs text-gray-500">{complaint.createdAt?.toLocaleString()}</span>
+            <div key={complaint.id} className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition">
+              <div className="flex flex-col md:flex-row justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-start gap-3">
+                    <div className={`p-2 rounded-xl ${complaint.status === 'pending' ? 'bg-yellow-100' : 'bg-green-100'}`}>
+                      <AlertTriangle className={`h-5 w-5 ${complaint.status === 'pending' ? 'text-yellow-600' : 'text-green-600'}`} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-800">{complaint.title}</h3>
+                      <p className="text-gray-600 flex items-center gap-2 mt-1">
+                        <Building2 className="h-4 w-4" />
+                        {complaint.companyEmail}
+                      </p>
+                      <div className="flex flex-wrap gap-3 mt-3">
+                        <span className={`text-xs px-2 py-1 rounded-full ${getPriorityColor(complaint.priority)}`}>
+                          {complaint.priority || 'medium'}
+                        </span>
+                        {/* ✅ Date and Time with Grey Background Highlight */}
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md text-sm text-gray-600">
+                          <Calendar className="h-3.5 w-3.5 text-gray-500" />
+                          {formatDateTime(complaint.createdAt)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
+
                 <div className="flex gap-2">
-                  <button onClick={() => openModal(complaint)} className="bg-cyan-600 text-white px-4 py-2 rounded-lg text-sm">View</button>
-                  <button onClick={() => handleDelete(complaint.id)} className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm">Delete</button>
+                  <button
+                    onClick={() => openModal(complaint)}
+                    className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1"
+                  >
+                    <Eye className="h-3.5 w-3.5" /> View
+                  </button>
+                  <button
+                    onClick={() => handleDelete(complaint.id)}
+                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> Delete
+                  </button>
                 </div>
               </div>
             </div>
@@ -229,13 +275,22 @@ export default function AdminComplaints() {
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
               <h2 className="text-xl font-bold">Complaint Details</h2>
-              <button onClick={closeModal} className="text-gray-500 hover:text-gray-700 text-2xl">✕</button>
+              <button onClick={closeModal} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
             </div>
             
             <div className="p-6 space-y-4">
               <div>
                 <h3 className="font-bold text-lg">{selectedComplaint.title}</h3>
-                <p className="text-sm text-gray-500">From: {selectedComplaint.companyEmail} • {selectedComplaint.createdAt?.toLocaleString()}</p>
+                <p className="text-sm text-gray-500">From: {selectedComplaint.companyEmail}</p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <span className={`text-xs px-2 py-1 rounded-full ${getPriorityColor(selectedComplaint.priority)}`}>
+                    {selectedComplaint.priority || 'medium'}
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md text-xs text-gray-600">
+                    <Calendar className="h-3 w-3" />
+                    {formatDateTime(selectedComplaint.createdAt)}
+                  </span>
+                </div>
               </div>
               
               <div className="bg-gray-50 p-4 rounded-lg">
@@ -243,7 +298,7 @@ export default function AdminComplaints() {
                 <p className="text-gray-700">{selectedComplaint.description}</p>
               </div>
               
-              {/* ✅ Show Attached Image */}
+              {/* Show Attached Image */}
               {getAttachmentUrl(selectedComplaint) && (
                 <div className="border rounded-lg p-4">
                   <p className="font-medium mb-2 flex items-center gap-2">

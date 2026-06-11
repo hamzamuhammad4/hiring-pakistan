@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import { 
   collection, getDocs, doc, updateDoc, deleteDoc,
-  query, where
+  query, where, orderBy
 } from "firebase/firestore";
 import toast from 'react-hot-toast';
 import { 
   Building2, Search, Ban, CheckCircle, 
-  Trash2, Mail, Phone, AlertTriangle, RefreshCw
+  Trash2, Mail, Phone, AlertTriangle, RefreshCw, Calendar
 } from "lucide-react";
 
 export default function AdminCompanies() {
@@ -18,10 +18,32 @@ export default function AdminCompanies() {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [stats, setStats] = useState({ total: 0, active: 0, blocked: 0 });
+  const [adminEmail, setAdminEmail] = useState(null);
 
+  // Get current admin email
   useEffect(() => {
-    fetchCompanies();
+    const user = auth.currentUser;
+    if (user) {
+      setAdminEmail(user.email);
+    }
   }, []);
+
+  // Format date and time function
+  const formatDateTime = (date) => {
+    if (!date) return "N/A";
+    
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'pm' : 'am';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    
+    return `${day}/${month}/${year}, ${hours}:${minutes} ${ampm}`;
+  };
 
   const fetchCompanies = async () => {
     try {
@@ -30,11 +52,16 @@ export default function AdminCompanies() {
       
       let companiesList = [];
       try {
-        const companiesSnap = await getDocs(collection(db, "companies"));
+        const companiesSnap = await getDocs(query(collection(db, "companies"), orderBy("createdAt", "desc")));
         companiesList = companiesSnap.docs.map(doc => ({
           id: doc.id,
-          ...doc.data()
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate?.() || new Date()
         }));
+        
+        if (adminEmail) {
+          companiesList = companiesList.filter(company => company.email !== adminEmail);
+        }
       } catch (err) {
         companiesList = [];
       }
@@ -53,6 +80,13 @@ export default function AdminCompanies() {
       setLoading(false);
     }
   };
+
+  // Refetch when adminEmail is set
+  useEffect(() => {
+    if (adminEmail !== null) {
+      fetchCompanies();
+    }
+  }, [adminEmail]);
 
   const handleStatusToggle = async (companyId, currentStatus) => {
     const newStatus = currentStatus === 'blocked' ? 'active' : 'blocked';
@@ -146,8 +180,9 @@ export default function AdminCompanies() {
         <p className="text-gray-500 mt-1">Manage all registered companies</p>
       </div>
 
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-blue-50 rounded-2xl p-6">
+        <div className="bg-blue-50 rounded-2xl p-6 border border-blue-200">
           <div className="flex items-center gap-4">
             <div className="bg-blue-500 p-3 rounded-xl">
               <Building2 className="h-6 w-6 text-white" />
@@ -158,7 +193,7 @@ export default function AdminCompanies() {
             </div>
           </div>
         </div>
-        <div className="bg-green-50 rounded-2xl p-6">
+        <div className="bg-green-50 rounded-2xl p-6 border border-green-200">
           <div className="flex items-center gap-4">
             <div className="bg-green-500 p-3 rounded-xl">
               <CheckCircle className="h-6 w-6 text-white" />
@@ -169,7 +204,7 @@ export default function AdminCompanies() {
             </div>
           </div>
         </div>
-        <div className="bg-red-50 rounded-2xl p-6">
+        <div className="bg-red-50 rounded-2xl p-6 border border-red-200">
           <div className="flex items-center gap-4">
             <div className="bg-red-500 p-3 rounded-xl">
               <Ban className="h-6 w-6 text-white" />
@@ -182,6 +217,7 @@ export default function AdminCompanies() {
         </div>
       </div>
 
+      {/* Search */}
       <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -195,6 +231,7 @@ export default function AdminCompanies() {
         </div>
       </div>
 
+      {/* Companies Table */}
       <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
         {companies.length === 0 ? (
           <div className="text-center py-12">
@@ -243,8 +280,11 @@ export default function AdminCompanies() {
                     <td className="px-6 py-4">
                       <span className="font-medium">{company.credits || 0}</span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {company.createdAt?.toDate?.()?.toLocaleDateString() || 'N/A'}
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md text-sm text-gray-600">
+                        <Calendar className="h-3.5 w-3.5 text-gray-500" />
+                        {formatDateTime(company.createdAt)}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 rounded-full text-xs ${

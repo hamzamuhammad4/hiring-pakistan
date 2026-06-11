@@ -175,7 +175,7 @@ export default function AdminPayments() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">💰 Payment Requests</h1>
+        <h1 className="text-3xl font-bold text-gray-800">Payment Requests</h1>
         <p className="text-gray-500 mt-1">Verify and approve manual payment requests from companies</p>
       </div>
 

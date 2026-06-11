@@ -4,21 +4,18 @@ import Image from "next/image";
 import { Briefcase, MapPin, Calendar, Building2, Clock, GraduationCap } from "lucide-react";
 
 export default function JobCard({ job }) {
-  // ✅ FIX: Handle Firestore Timestamp properly
+  // Handle Firestore Timestamp properly
   const getPostedDate = () => {
     if (!job.createdAt) return "Recent";
     
     try {
-      // Check if it's Firestore Timestamp (has toDate method)
       let date;
       if (typeof job.createdAt.toDate === 'function') {
         date = job.createdAt.toDate();
       } 
-      // Check if it's already a Date object
       else if (job.createdAt instanceof Date) {
         date = job.createdAt;
       }
-      // Check if it's a string or timestamp number
       else if (typeof job.createdAt === 'string' || typeof job.createdAt === 'number') {
         date = new Date(job.createdAt);
       }
@@ -26,7 +23,6 @@ export default function JobCard({ job }) {
         return "Recent";
       }
       
-      // Check if date is valid
       if (isNaN(date.getTime())) {
         return "Recent";
       }
@@ -50,13 +46,6 @@ export default function JobCard({ job }) {
     return formatted;
   };
 
-  // Limit description to 80 characters
-  const getShortDescription = (description) => {
-    if (!description) return "No description available";
-    if (description.length <= 80) return description;
-    return description.substring(0, 80) + "...";
-  };
-
   const postedDate = getPostedDate();
 
   return (
@@ -78,8 +67,9 @@ export default function JobCard({ job }) {
             <h3 className="text-base sm:text-lg font-bold text-gray-800 hover:text-cyan-600 line-clamp-1">
               <Link href={`/jobs/${job.id}`}>{job.title}</Link>
             </h3>
+            {/* ✅ Only "Hiring Pakistan" - fixed text, no dynamic company name */}
             <p className="text-gray-600 text-xs flex items-center gap-1">
-              <Building2 className="h-3 w-3" /> {job.companyName || "Hiring Pakistan"}
+              <Building2 className="h-3 w-3" /> Hiring Pakistan
             </p>
           </div>
         </div>
@@ -121,10 +111,7 @@ export default function JobCard({ job }) {
           )}
         </div>
 
-        {/* Description Preview */}
-        <p className="text-gray-600 text-xs mb-3 flex-1">
-          {getShortDescription(job.description)}
-        </p>
+        {/* ✅ Description removed - no longer shown */}
 
         {/* Footer */}
         <div className="flex justify-between items-center pt-2 border-t mt-auto">
