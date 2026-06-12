@@ -1,4 +1,4 @@
-// src/app/company/funds/page.js
+// src/app/company/funds/page.js - 3 CARDS PER SLIDE
 "use client";
 
 import { useState, useEffect } from "react";
@@ -13,7 +13,8 @@ import toast from 'react-hot-toast';
 import { 
   CreditCard, Building2, Coins, Zap, CheckCircle,
   Upload, Phone, Landmark, AlertCircle,
-  Copy, X, Image as ImageIcon, FileText
+  Copy, X, Image as ImageIcon, FileText,
+  ChevronLeft, ChevronRight
 } from "lucide-react";
 
 // Payment Methods (Bank details - static)
@@ -81,6 +82,38 @@ const DEFAULT_PLANS = [
     credits: 200,
     popular: false,
     features: ['📋 Unlimited job posts', '👁️ 200 CV views', '🕐 24/7 priority support', '⭐ Job featured for 7 days']
+  },
+  {
+    id: 'basic2',
+    name: 'Basic 2',
+    price: 5000,
+    credits: 50,
+    popular: false,
+    features: ['📋 Post up to 20 jobs', '👁️ 50 CV views', '💬 Priority support']
+  },
+  {
+    id: 'gold',
+    name: 'Gold Plan',
+    price: 10000,
+    credits: 50,
+    popular: true,
+    features: ['📋 Unlimited jobs post', '👁️ 50 CV views', '⭐ Featured jobs']
+  },
+  {
+    id: 'premiums',
+    name: 'Plan Premiums',
+    price: 15000,
+    credits: 100,
+    popular: false,
+    features: ['📋 Unlimited jobs', '👁️ 100 CV views', '🕐 24/7 support']
+  },
+  {
+    id: 'pro',
+    name: 'Pro',
+    price: 20000,
+    credits: 20,
+    popular: false,
+    features: ['📋 Premium support', '👁️ 20 CV views', '⭐ Top featured']
   }
 ];
 
@@ -104,11 +137,14 @@ export default function FundsPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentStep, setPaymentStep] = useState(1);
   const [copiedField, setCopiedField] = useState(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
   
   // Dynamic state for subscriptions from Firestore
   const [subscriptions, setSubscriptions] = useState([]);
   const [creditPacks, setCreditPacks] = useState([]);
   const [loadingSubs, setLoadingSubs] = useState(true);
+
+  const ITEMS_PER_SLIDE = 3;
 
   // Fetch subscriptions from Firestore
   const fetchSubscriptions = async () => {
@@ -174,6 +210,27 @@ export default function FundsPage() {
 
     return () => unsubscribe();
   }, [router]);
+
+  // Carousel functions - 3 cards per slide
+  const totalSlides = Math.ceil(subscriptions.length / ITEMS_PER_SLIDE);
+  const startIndex = currentSlide * ITEMS_PER_SLIDE;
+  const visiblePlans = subscriptions.slice(startIndex, startIndex + ITEMS_PER_SLIDE);
+
+  const nextSlide = () => {
+    if (currentSlide < totalSlides - 1) {
+      setCurrentSlide(currentSlide + 1);
+    }
+  };
+
+  const prevSlide = () => {
+    if (currentSlide > 0) {
+      setCurrentSlide(currentSlide - 1);
+    }
+  };
+
+  const goToSlide = (index) => {
+    setCurrentSlide(index);
+  };
 
   const handlePlanSelect = (plan) => {
     if (plan.price === 0) {
@@ -450,7 +507,7 @@ export default function FundsPage() {
                   </div>
                 </div>
 
-                {/* Screenshot Upload with file type info and 1MB limit text */}
+                {/* Screenshot Upload */}
                 <div>
                   <label className="block font-semibold mb-2">Upload Payment Screenshot</label>
                   <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-cyan-500 transition">
@@ -562,43 +619,89 @@ export default function FundsPage() {
           </div>
         </div>
 
-        {/* Subscription Plans */}
+        {/* ✅ Subscription Plans - CAROUSEL (3 cards per slide) */}
         <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
           <Zap className="h-6 w-6 text-cyan-600" />
           Subscription Plans
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          {subscriptions.map((plan) => (
-            <div 
-              key={plan.id} 
-              className={`bg-white rounded-2xl shadow-lg overflow-hidden transition hover:shadow-xl ${
-                plan.popular ? 'border-2 border-cyan-500 relative' : ''
-              }`}
+        
+        <div className="relative mb-12">
+          {/* Left Arrow */}
+          {totalSlides > 1 && currentSlide > 0 && (
+            <button
+              onClick={prevSlide}
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 bg-white rounded-full p-3 shadow-lg hover:bg-gray-100 transition"
             >
-              {plan.popular && <div className="bg-cyan-500 text-white text-center py-2 text-sm font-bold">🔥 MOST POPULAR</div>}
-              <div className="p-6">
-                <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
-                <p className="text-4xl font-bold text-cyan-600 mb-2">Rs {plan.price?.toLocaleString() || 0}</p>
-                <p className="text-sm text-gray-500 mb-4">{plan.credits} credits</p>
-                <ul className="space-y-2 mb-6">
-                  {plan.features?.map((feature, i) => (
-                    <li key={i} className="flex items-center gap-2 text-sm text-gray-600">{feature}</li>
-                  ))}
-                </ul>
-                <button
-                  onClick={() => handlePlanSelect(plan)}
-                  disabled={plan.name === companyData?.plan && plan.price === 0}
-                  className={`w-full py-3 rounded-xl font-semibold transition ${
-                    plan.name === companyData?.plan && plan.price === 0
-                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:from-cyan-700 hover:to-blue-700'
+              <ChevronLeft className="h-6 w-6 text-gray-700" />
+            </button>
+          )}
+
+          {/* Carousel Container */}
+          <div className="overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 transition-all duration-300">
+              {visiblePlans.map((plan) => (
+                <div 
+                  key={plan.id} 
+                  className={`bg-white rounded-2xl shadow-lg overflow-hidden transition hover:shadow-xl ${
+                    plan.popular ? 'border-2 border-cyan-500 relative' : ''
                   }`}
                 >
-                  {plan.name === companyData?.plan && plan.price === 0 ? 'Current Plan' : 'Select Plan'}
-                </button>
-              </div>
+                  {plan.popular && <div className="bg-cyan-500 text-white text-center py-2 text-sm font-bold">🔥 MOST POPULAR</div>}
+                  <div className="p-6">
+                    <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
+                    <p className="text-4xl font-bold text-cyan-600 mb-2">Rs {plan.price?.toLocaleString() || 0}</p>
+                    <p className="text-sm text-gray-500 mb-4">{plan.credits} credits</p>
+                    <ul className="space-y-2 mb-6">
+                      {plan.features?.slice(0, 3).map((feature, i) => (
+                        <li key={i} className="flex items-center gap-2 text-sm text-gray-600">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                    <button
+                      onClick={() => handlePlanSelect(plan)}
+                      disabled={plan.name === companyData?.plan && plan.price === 0}
+                      className={`w-full py-3 rounded-xl font-semibold transition ${
+                        plan.name === companyData?.plan && plan.price === 0
+                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:from-cyan-700 hover:to-blue-700'
+                      }`}
+                    >
+                      {plan.name === companyData?.plan && plan.price === 0 ? 'Current Plan' : 'Select Plan'}
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
+
+          {/* Right Arrow */}
+          {totalSlides > 1 && currentSlide < totalSlides - 1 && (
+            <button
+              onClick={nextSlide}
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 bg-white rounded-full p-3 shadow-lg hover:bg-gray-100 transition"
+            >
+              <ChevronRight className="h-6 w-6 text-gray-700" />
+            </button>
+          )}
+
+          {/* Pagination Dots */}
+          {totalSlides > 1 && (
+            <div className="flex justify-center gap-2 mt-6">
+              {Array.from({ length: totalSlides }).map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => goToSlide(idx)}
+                  className={`h-2 rounded-full transition-all ${
+                    currentSlide === idx 
+                      ? 'w-6 bg-cyan-600' 
+                      : 'w-2 bg-gray-300 hover:bg-gray-400'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Credit Packs */}
@@ -619,7 +722,7 @@ export default function FundsPage() {
           ))}
         </div>
 
-        {/* Info Box - 4 points inline horizontally */}
+        {/* Info Box */}
         <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-6">
           <div className="flex gap-4">
             <div className="bg-blue-500 p-3 rounded-full h-12 w-12 flex items-center justify-center flex-shrink-0">
