@@ -1,7 +1,7 @@
 // src/app/search/page.js
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
@@ -90,7 +90,7 @@ function SearchJobCard({ job }) {
   );
 }
 
-export default function SearchPage() {
+function SearchContent() {
   const searchParams = useSearchParams();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -167,13 +167,11 @@ export default function SearchPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Search Header - Lighter gradient */}
+      {/* Search Header */}
       <div className="bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 py-6 px-4">
         <div className="max-w-6xl mx-auto">
           <form onSubmit={handleSearch} className="space-y-3">
-            {/* Main Search Row */}
             <div className="flex flex-col md:flex-row gap-3">
-              {/* Search Input - WHITE BACKGROUND */}
               <div className="flex-1 relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
@@ -184,8 +182,6 @@ export default function SearchPage() {
                   className="w-full pl-11 pr-4 py-3 rounded-xl border-0 focus:ring-2 focus:ring-cyan-400 outline-none bg-white text-gray-800 placeholder:text-gray-400"
                 />
               </div>
-              
-              {/* Category Select - WHITE BACKGROUND */}
               <select
                 value={filters.category}
                 onChange={(e) => updateFilter('category', e.target.value)}
@@ -193,8 +189,6 @@ export default function SearchPage() {
               >
                 {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
               </select>
-              
-              {/* Search Button */}
               <button
                 type="submit"
                 className="bg-white text-cyan-600 hover:bg-gray-100 font-semibold px-8 py-3 rounded-xl transition shadow-md border-0"
@@ -202,8 +196,6 @@ export default function SearchPage() {
                 Search Jobs
               </button>
             </div>
-
-            {/* Filter Row - WHITE BACKGROUND */}
             <div className="flex flex-wrap gap-3">
               <input
                 type="text"
@@ -260,5 +252,17 @@ export default function SearchPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center py-20">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
+      </div>
+    }>
+      <SearchContent />
+    </Suspense>
   );
 }
