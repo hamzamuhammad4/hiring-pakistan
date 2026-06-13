@@ -12,7 +12,8 @@ import toast from 'react-hot-toast';
 import { 
   Briefcase, Search, CheckCircle, XCircle, 
   Eye, Trash2, Clock, Building2, MapPin,
-  Filter, ExternalLink, AlertTriangle, RefreshCw, Edit, Calendar
+  Filter, ExternalLink, AlertTriangle, RefreshCw, Edit, Calendar,
+  ChevronLeft, ChevronRight
 } from "lucide-react";
 import Link from "next/link";
 
@@ -24,6 +25,10 @@ export default function AdminJobs() {
   const [filter, setFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   useEffect(() => {
     fetchJobs();
@@ -36,7 +41,6 @@ export default function AdminJobs() {
       
       let jobsList = [];
       try {
-        // ✅ ADDED SORTING: orderBy createdAt descending (newest first)
         const jobsSnap = await getDocs(query(collection(db, "jobs"), orderBy("createdAt", "desc")));
         jobsList = jobsSnap.docs.map(doc => ({
           id: doc.id,
@@ -56,6 +60,9 @@ export default function AdminJobs() {
         approved: jobsList.filter(j => j.status === 'active' || j.status === 'approved').length,
         rejected: jobsList.filter(j => j.status === 'rejected').length
       });
+      
+      // Reset to first page when data changes
+      setCurrentPage(1);
       
     } catch (err) {
       console.error("Error fetching jobs:", err);
@@ -187,6 +194,7 @@ export default function AdminJobs() {
     return `PKR ${salaryStr.trim()}`;
   };
 
+  // Filter jobs by status and search
   const filteredJobs = jobs.filter(job => {
     if (filter === 'pending' && job.status !== 'pending') return false;
     if (filter === 'approved' && job.status !== 'active' && job.status !== 'approved') return false;
@@ -199,6 +207,33 @@ export default function AdminJobs() {
     
     return true;
   });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredJobs.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedJobs = filteredJobs.slice(startIndex, startIndex + itemsPerPage);
+
+  // Go to page
+  const goToPage = (page) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Previous page
+  const prevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // Next page
+  const nextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   const getStatusBadge = (status) => {
     switch(status) {
@@ -310,109 +345,172 @@ export default function AdminJobs() {
       </div>
 
       {/* Jobs List - Sorted by newest first */}
-      {jobs.length === 0 ? (
+      {filteredJobs.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
           <Briefcase className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500">No jobs posted yet</p>
-          <p className="text-sm text-gray-400 mt-2">Jobs will appear here when companies post them</p>
+          <p className="text-gray-500">No jobs found</p>
+          <p className="text-sm text-gray-400 mt-2">Try adjusting your search or filters</p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {filteredJobs.map((job) => {
-            const StatusBadge = getStatusBadge(job.status);
-            const StatusIcon = StatusBadge.icon;
-            
-            return (
-              <div key={job.id} className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition">
-                <div className="flex flex-col md:flex-row justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-start gap-3">
-                      <div className="bg-cyan-100 p-2 rounded-xl">
-                        <Briefcase className="h-6 w-6 text-cyan-600" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-bold text-gray-800">{job.title}</h3>
-                        <p className="text-gray-600 flex items-center gap-2 mt-1">
-                          <Building2 className="h-4 w-4" />
-                          {job.companyName}
-                        </p>
-                        <div className="flex flex-wrap gap-3 mt-3">
-                          <span className="flex items-center gap-1 text-sm text-gray-500">
-                            <MapPin className="h-4 w-4" />
-                            {job.location || 'Karachi'}
-                          </span>
-                          <span className="flex items-center gap-1 text-sm text-gray-500">
-                            {formatSalary(job.salary)}
-                          </span>
-                          {/* Date and Time with Grey Background Highlight */}
-                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md text-sm text-gray-600">
-                            <Calendar className="h-3.5 w-3.5 text-gray-500" />
-                            {formatDateTime(job.createdAt)}
-                          </span>
+        <>
+          <div className="space-y-4">
+            {paginatedJobs.map((job) => {
+              const StatusBadge = getStatusBadge(job.status);
+              const StatusIcon = StatusBadge.icon;
+              
+              return (
+                <div key={job.id} className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition">
+                  <div className="flex flex-col md:flex-row justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-start gap-3">
+                        <div className="bg-cyan-100 p-2 rounded-xl">
+                          <Briefcase className="h-6 w-6 text-cyan-600" />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-bold text-gray-800">{job.title}</h3>
+                          <p className="text-gray-600 flex items-center gap-2 mt-1">
+                            <Building2 className="h-4 w-4" />
+                            {job.companyName}
+                          </p>
+                          <div className="flex flex-wrap gap-3 mt-3">
+                            <span className="flex items-center gap-1 text-sm text-gray-500">
+                              <MapPin className="h-4 w-4" />
+                              {job.location || 'Karachi'}
+                            </span>
+                            <span className="flex items-center gap-1 text-sm text-gray-500">
+                              {formatSalary(job.salary)}
+                            </span>
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md text-sm text-gray-600">
+                              <Calendar className="h-3.5 w-3.5 text-gray-500" />
+                              {formatDateTime(job.createdAt)}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex flex-col items-end gap-3">
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 ${StatusBadge.bg} ${StatusBadge.text}`}>
-                      <StatusIcon className="h-4 w-4" />
-                      {StatusBadge.label}
-                    </span>
+                    <div className="flex flex-col items-end gap-3">
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 ${StatusBadge.bg} ${StatusBadge.text}`}>
+                        <StatusIcon className="h-4 w-4" />
+                        {StatusBadge.label}
+                      </span>
 
-                    {job.status === 'pending' && (
-                      <div className="flex gap-2">
+                      {job.status === 'pending' && (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleApprove(job.id)}
+                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-1"
+                          >
+                            <CheckCircle className="h-4 w-4" /> Approve
+                          </button>
+                          <button
+                            onClick={() => handleReject(job.id)}
+                            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-1"
+                          >
+                            <XCircle className="h-4 w-4" /> Reject
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap gap-2">
                         <button
-                          onClick={() => handleApprove(job.id)}
-                          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-1"
+                          onClick={() => handleEdit(job.id)}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1 transition"
                         >
-                          <CheckCircle className="h-4 w-4" /> Approve
+                          <Edit className="h-3.5 w-3.5" /> Edit
                         </button>
-                        <button
-                          onClick={() => handleReject(job.id)}
-                          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-1"
+                        <Link
+                          href={`/admin/jobs/preview/${job.id}`}
+                          target="_blank"
+                          className="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1 transition"
                         >
-                          <XCircle className="h-4 w-4" /> Reject
+                          <ExternalLink className="h-3.5 w-3.5" /> View Job
+                        </Link>
+                        <button
+                          onClick={() => handleDelete(job.id)}
+                          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1 transition"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" /> Delete
                         </button>
                       </div>
-                    )}
-
-                    {/* ALL BUTTONS SAME SIZE */}
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => handleEdit(job.id)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1 transition"
-                      >
-                        <Edit className="h-3.5 w-3.5" /> Edit
-                      </button>
-                      <Link
-                        href={`/admin/jobs/preview/${job.id}`}
-                        target="_blank"
-                        className="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1 transition"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" /> View Job
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(job.id)}
-                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1 transition"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" /> Delete
-                      </button>
                     </div>
                   </div>
-                </div>
 
-                {job.rejectionReason && (
-                  <div className="mt-4 bg-red-50 p-3 rounded-lg">
-                    <p className="text-sm text-red-700">
-                      <strong>Rejection Reason:</strong> {job.rejectionReason}
-                    </p>
-                  </div>
-                )}
+                  {job.rejectionReason && (
+                    <div className="mt-4 bg-red-50 p-3 rounded-lg">
+                      <p className="text-sm text-red-700">
+                        <strong>Rejection Reason:</strong> {job.rejectionReason}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex justify-between items-center mt-6 px-2 py-4 bg-white rounded-lg">
+              <div className="text-sm text-gray-500">
+                Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredJobs.length)} of {filteredJobs.length} jobs
               </div>
-            );
-          })}
-        </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={prevPage}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-2 rounded-lg flex items-center gap-1 transition ${
+                    currentPage === 1
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                  }`}
+                >
+                  <ChevronLeft className="h-4 w-4" /> Previous
+                </button>
+                
+                <div className="flex gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => goToPage(pageNum)}
+                        className={`w-10 h-10 rounded-lg transition ${
+                          currentPage === pageNum
+                            ? 'bg-cyan-600 text-white'
+                            : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+                
+                <button
+                  onClick={nextPage}
+                  disabled={currentPage === totalPages}
+                  className={`px-3 py-2 rounded-lg flex items-center gap-1 transition ${
+                    currentPage === totalPages
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                  }`}
+                >
+                  Next <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

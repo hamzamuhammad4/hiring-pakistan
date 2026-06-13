@@ -11,7 +11,8 @@ import toast from 'react-hot-toast';
 import { 
   Mail, Trash2, Download, RefreshCw, 
   AlertTriangle, CheckCircle, Users, Send,
-  Search, Eye, EyeOff, Calendar
+  Search, Eye, EyeOff, Calendar,
+  ChevronLeft, ChevronRight
 } from "lucide-react";
 
 export default function AdminNewsletter() {
@@ -20,6 +21,10 @@ export default function AdminNewsletter() {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [stats, setStats] = useState({ total: 0, active: 0 });
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(15);
 
   useEffect(() => {
     fetchSubscribers();
@@ -58,6 +63,10 @@ export default function AdminNewsletter() {
         total: subscribersList.length,
         active: subscribersList.filter(s => s.status !== 'unsubscribed').length
       });
+      
+      // Reset to first page when data changes
+      setCurrentPage(1);
+      
     } catch (err) {
       console.error(err);
       setError(err.message);
@@ -97,9 +106,37 @@ export default function AdminNewsletter() {
     toast.success("Export started!");
   };
 
+  // Filter subscribers by search
   const filteredSubscribers = subscribers.filter(s =>
     s.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredSubscribers.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedSubscribers = filteredSubscribers.slice(startIndex, startIndex + itemsPerPage);
+
+  // Go to page
+  const goToPage = (page) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Previous page
+  const prevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // Next page
+  const nextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   if (loading) {
     return (
@@ -185,72 +222,136 @@ export default function AdminNewsletter() {
         </div>
       </div>
 
-      {/* Subscribers Table */}
+      {/* Subscribers Table with Pagination */}
       <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-        {subscribers.length === 0 ? (
+        {filteredSubscribers.length === 0 ? (
           <div className="text-center py-12">
             <Mail className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">No subscribers yet</p>
-            <p className="text-sm text-gray-400 mt-2">Subscribers will appear here when people sign up</p>
+            <p className="text-gray-500">No subscribers found</p>
+            <p className="text-sm text-gray-400 mt-2">Try adjusting your search</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Email</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Subscribed Date</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Status</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Source</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredSubscribers.map((subscriber) => (
-                  <tr key={subscriber.id} className="border-b hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-gray-400" />
-                        <span className="font-medium text-gray-800">{subscriber.email}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md text-sm text-gray-600">
-                        <Calendar className="h-3.5 w-3.5 text-gray-500" />
-                        {formatDateTime(subscriber.subscribedAt)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        subscriber.status === 'active' 
-                          ? 'bg-green-100 text-green-700' 
-                          : 'bg-gray-100 text-gray-500'
-                      }`}>
-                        {subscriber.status === 'active' ? 'Active' : 'Unsubscribed'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2 py-1 bg-gray-100 rounded-md text-xs text-gray-600">
-                        {subscriber.source || 'Footer'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <button
-                        onClick={() => handleDelete(subscriber.id)}
-                        className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition"
-                        title="Remove"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </td>
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Email</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Subscribed Date</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Status</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Source</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {paginatedSubscribers.map((subscriber) => (
+                    <tr key={subscriber.id} className="border-b hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-gray-400" />
+                          <span className="font-medium text-gray-800">{subscriber.email}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md text-sm text-gray-600">
+                          <Calendar className="h-3.5 w-3.5 text-gray-500" />
+                          {formatDateTime(subscriber.subscribedAt)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          subscriber.status === 'active' 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-gray-100 text-gray-500'
+                        }`}>
+                          {subscriber.status === 'active' ? 'Active' : 'Unsubscribed'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center px-2 py-1 bg-gray-100 rounded-md text-xs text-gray-600">
+                          {subscriber.source || 'Footer'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => handleDelete(subscriber.id)}
+                          className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition"
+                          title="Remove"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-between items-center px-6 py-4 border-t bg-gray-50">
+                <div className="text-sm text-gray-500">
+                  Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredSubscribers.length)} of {filteredSubscribers.length} subscribers
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={prevPage}
+                    disabled={currentPage === 1}
+                    className={`px-3 py-2 rounded-lg flex items-center gap-1 transition ${
+                      currentPage === 1
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                    }`}
+                  >
+                    <ChevronLeft className="h-4 w-4" /> Previous
+                  </button>
+                  
+                  <div className="flex gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => goToPage(pageNum)}
+                          className={`w-10 h-10 rounded-lg transition ${
+                            currentPage === pageNum
+                              ? 'bg-cyan-600 text-white'
+                              : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  <button
+                    onClick={nextPage}
+                    disabled={currentPage === totalPages}
+                    className={`px-3 py-2 rounded-lg flex items-center gap-1 transition ${
+                      currentPage === totalPages
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                    }`}
+                  >
+                    Next <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
-
     </div>
   );
 }
