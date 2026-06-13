@@ -1,4 +1,4 @@
-// src/app/page.js - FINAL CLEAN VERSION (No Debug Text)
+// src/app/page.js - FIXED VERSION
 "use client";
 
 import JobCard from "@/components/JobCard";
@@ -38,33 +38,43 @@ function HomeContent() {
   const [isCompanyLoggedIn, setIsCompanyLoggedIn] = useState(false);
 
   // Get filters from URL
-  const searchQuery = searchParams.get('search') || "";
-  const categoryFilter = searchParams.get('category') || "All";
+  const searchQuery = searchParams?.get('search') || "";
+  const categoryFilter = searchParams?.get('category') || "All";
 
   // Direct Firebase auth check
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user && user.emailVerified) {
-        const { doc, getDoc } = await import('firebase/firestore');
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        const role = userDoc.exists() ? userDoc.data().role : null;
-        setIsCompanyLoggedIn(role === "company" || role === "employer");
+        try {
+          const { doc, getDoc } = await import('firebase/firestore');
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          const role = userDoc.exists() ? userDoc.data().role : null;
+          setIsCompanyLoggedIn(role === "company" || role === "employer");
+        } catch (err) {
+          console.error("Auth error:", err);
+          setIsCompanyLoggedIn(false);
+        }
       } else {
         setIsCompanyLoggedIn(false);
       }
     });
     
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
 
   // Load jobs
   useEffect(() => {
     async function loadJobs() {
       setLoading(true);
-      const jobs = await getAllJobs();
-      setAllJobs(jobs);
-      setFilteredJobs(jobs);
-      setLoading(false);
+      try {
+        const jobs = await getAllJobs();
+        setAllJobs(jobs);
+        setFilteredJobs(jobs);
+      } catch (err) {
+        console.error("Error loading jobs:", err);
+      } finally {
+        setLoading(false);
+      }
     }
     loadJobs();
   }, []);
@@ -98,6 +108,11 @@ function HomeContent() {
     { number: "50K+", label: "Candidates" },
     { number: "100%", label: "Free for Job Seekers" },
   ];
+
+  // Add null check for searchParams
+  if (!searchParams) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
 
   return (
     <>
@@ -184,7 +199,7 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* CTA Section - CLEAN (No Debug Text) */}
+      {/* CTA Section */}
       <section className="py-16 px-4 bg-gradient-to-r from-cyan-600 to-blue-600">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
@@ -217,7 +232,7 @@ function HomeContent() {
   );
 }
 
-// Main export
+// Main export - ensure this is correct
 export default function HomePage() {
   return (
     <Suspense fallback={
