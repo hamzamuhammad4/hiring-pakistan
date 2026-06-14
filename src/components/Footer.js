@@ -1,4 +1,4 @@
-// src/components/Footer.js - WITH DIRECT FIRESTORE SAVE
+// src/components/Footer.js
 "use client";
 
 import { useState } from "react";
@@ -8,20 +8,14 @@ import {
   Facebook, Twitter, Linkedin, Instagram, Mail, 
   Phone, Send, ChevronRight, Youtube
 } from "lucide-react";
-import { useAuth } from "@/lib/useAuth";
-import { db } from "@/lib/firebase"; // ✅ Import db directly
-import { collection, addDoc, query, where, getDocs, serverTimestamp } from "firebase/firestore"; // ✅ Firestore imports
 
 export default function Footer() {
-  const { user, role } = useAuth();
   const currentYear = new Date().getFullYear();
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterStatus, setNewsletterStatus] = useState(null);
   const [newsletterLoading, setNewsletterLoading] = useState(false);
 
-  const isCompanyLoggedIn = user && role === "company" && user.emailVerified === true;
-
-  // ✅ Direct Firestore save - NO API CALL
+  // ✅ Using API route - NO LOGIN REQUIRED
   const handleNewsletterSubscribe = async (e) => {
     e.preventDefault();
     
@@ -35,31 +29,23 @@ export default function Footer() {
     setNewsletterStatus(null);
     
     try {
-      // Check if already subscribed
-      const q = query(collection(db, "newsletter"), where("email", "==", newsletterEmail));
-      const existing = await getDocs(q);
-      
-      if (!existing.empty) {
-        setNewsletterStatus({ error: 'This email is already subscribed!' });
-        setNewsletterLoading(false);
-        setTimeout(() => setNewsletterStatus(null), 3000);
-        return;
-      }
-      
-      // ✅ Save directly to Firestore
-      await addDoc(collection(db, "newsletter"), {
-        email: newsletterEmail,
-        subscribedAt: serverTimestamp(),
-        status: 'active',
-        source: 'footer'
+      const res = await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: newsletterEmail })
       });
       
-      setNewsletterStatus({ success: '✅ Subscribed successfully! Thank you.' });
-      setNewsletterEmail('');
+      const data = await res.json();
       
+      if (res.ok) {
+        setNewsletterStatus({ success: data.message || '✅ Subscribed successfully!' });
+        setNewsletterEmail('');
+      } else {
+        setNewsletterStatus({ error: data.error || 'Subscription failed' });
+      }
     } catch (error) {
       console.error('Newsletter error:', error);
-      setNewsletterStatus({ error: 'Subscription failed. Please try again.' });
+      setNewsletterStatus({ error: 'Network error. Please try again.' });
     } finally {
       setNewsletterLoading(false);
       setTimeout(() => setNewsletterStatus(null), 5000);
@@ -123,27 +109,9 @@ export default function Footer() {
           <div>
             <h3 className="text-white font-bold text-lg mb-4">For Employers</h3>
             <ul className="space-y-2">
-              {!isCompanyLoggedIn && (
-                <li>
-                  <Link href="/company/login" className="text-gray-400 hover:text-cyan-500 transition flex items-center gap-1">
-                    <ChevronRight className="h-4 w-4" /> Company Login
-                  </Link>
-                </li>
-              )}
-              {isCompanyLoggedIn && (
-                <li>
-                  <Link href="/company/dashboard" className="text-gray-400 hover:text-cyan-500 transition flex items-center gap-1">
-                    <ChevronRight className="h-4 w-4" /> Dashboard
-                  </Link>
-                </li>
-              )}
-              {/* <li>
-                <Link href={isCompanyLoggedIn ? "/company/dashboard/post-job" : "/pricing"} className="text-gray-400 hover:text-cyan-500 transition flex items-center gap-1">
-                  <ChevronRight className="h-4 w-4" /> Post a Job
-                </Link>
-              </li> */}
+              <li><Link href="/company/login" className="text-gray-400 hover:text-cyan-500 transition flex items-center gap-1"><ChevronRight className="h-4 w-4" /> Company Login</Link></li>
+              <li><Link href="/company/signup" className="text-gray-400 hover:text-cyan-500 transition flex items-center gap-1"><ChevronRight className="h-4 w-4" /> Register Company</Link></li>
               <li><Link href="/pricing" className="text-gray-400 hover:text-cyan-500 transition flex items-center gap-1"><ChevronRight className="h-4 w-4" /> Pricing Plans</Link></li>
-              <li><Link href="/hire" className="text-gray-400 hover:text-cyan-500 transition flex items-center gap-1"><ChevronRight className="h-4 w-4" /> Hire Talent</Link></li>
               <li><a href="https://wa.me/923482350367" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-green-500 transition flex items-center gap-1"><ChevronRight className="h-4 w-4" /> WhatsApp Support</a></li>
             </ul>
           </div>
@@ -172,7 +140,7 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* ✅ Newsletter Section - Direct Firestore */}
+        {/* ✅ Newsletter Section - Using API Route */}
         <div className="border-t border-gray-800 mt-8 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="text-center md:text-left">

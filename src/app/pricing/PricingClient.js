@@ -40,8 +40,8 @@ export default function PricingClient() {
 
   const handleGetStarted = (plan) => {
     if (isLoggedIn) {
-      // ✅ If logged in, go to payment page
-      router.push("/company/funds");
+      // ✅ Go to funds page with query parameter to auto-open modal
+      router.push(`/company/funds?select=true&planId=${plan.id}`);
     } else {
       // ✅ If not logged in, go to signup page
       router.push("/company/signup");
@@ -98,13 +98,6 @@ export default function PricingClient() {
                 </div>
               </div>
             ))}
-          </div>
-        )}
-
-        {/* Optional: Show login status message */}
-        {isLoggedIn && (
-          <div className="text-center mt-8 text-sm text-gray-500">
-            You are logged in. Clicking Get Started will take you to the payment page.
           </div>
         )}
       </div>
