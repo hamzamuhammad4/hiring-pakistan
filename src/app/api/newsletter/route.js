@@ -1,78 +1,48 @@
-// src/app/api/newsletter/route.js
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
+import { initializeApp, getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// Initialize Admin SDK (bypasses client-side rules)
+if (!getApps().length) {
+  initializeApp({
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  });
+}
+
+const db = getFirestore();
 
 export async function POST(request) {
   try {
     const { email } = await request.json();
     
     if (!email || !email.includes('@')) {
-      return NextResponse.json({ error: 'Valid email is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Valid email required' }, { status: 400 });
     }
     
-    // Check if already subscribed in Firestore
-    const q = query(collection(db, "newsletter"), where("email", "==", email));
-    const existing = await getDocs(q);
+    // Check if already subscribed
+    const existing = await db.collection('newsletter').where('email', '==', email).get();
     
     if (!existing.empty) {
-      return NextResponse.json({ 
-        message: 'Already subscribed!' 
-      }, { status: 200 });
+      return NextResponse.json({ message: 'Already subscribed!' }, { status: 200 });
     }
     
-    // Add to Firestore
-    await addDoc(collection(db, "newsletter"), {
+    // Add to Firestore (Admin SDK bypasses all rules)
+    await db.collection('newsletter').add({
       email: email,
-      subscribedAt: serverTimestamp(),
+      subscribedAt: new Date(),
       status: 'active',
       source: 'footer'
     });
     
-    console.log('📧 New subscriber:', email);
+    console.log('New subscriber:', email);
     
     return NextResponse.json({ 
       success: true, 
-      message: 'Subscribed successfully! Check your email for updates.' 
+      message: 'Subscribed successfully!' 
     });
     
   } catch (error) {
-    console.error('Newsletter error:', error);
+    console.error('Error:', error);
     return NextResponse.json({ error: 'Failed to subscribe' }, { status: 500 });
-  }
-}
-
-// GET endpoint for admin to fetch subscribers
-export async function GET(request) {
-  try {
-    // Check for admin authentication
-    const authHeader = request.headers.get('authorization');
-    
-    // Simple check - in production, use proper authentication
-    if (!authHeader || authHeader !== `Bearer ${process.env.ADMIN_SECRET}`) {
-      // For now, allow if it's an internal request
-      const url = new URL(request.url);
-      const isAdminCall = url.searchParams.get('admin') === 'true';
-      
-      if (!isAdminCall) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-    }
-    
-    const snapshot = await getDocs(collection(db, "newsletter"));
-    const subscribers = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      subscribedAt: doc.data().subscribedAt?.toDate?.() || new Date()
-    }));
-    
-    return NextResponse.json({ 
-      subscribers, 
-      count: subscribers.length 
-    });
-    
-  } catch (error) {
-    console.error('Error fetching subscribers:', error);
-    return NextResponse.json({ error: 'Failed to fetch subscribers' }, { status: 500 });
   }
 }
