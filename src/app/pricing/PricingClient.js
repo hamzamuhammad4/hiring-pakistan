@@ -2,14 +2,25 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CheckCircle, Star, CreditCard } from "lucide-react";
 
 export default function PricingClient() {
+  const router = useRouter();
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Check if user is logged in
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setIsLoggedIn(!!user);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -26,6 +37,16 @@ export default function PricingClient() {
     };
     fetchPlans();
   }, []);
+
+  const handleGetStarted = (plan) => {
+    if (isLoggedIn) {
+      // ✅ If logged in, go to payment page
+      router.push("/company/funds");
+    } else {
+      // ✅ If not logged in, go to signup page
+      router.push("/company/signup");
+    }
+  };
 
   if (loading) {
     return (
@@ -68,12 +89,22 @@ export default function PricingClient() {
                       </li>
                     ))}
                   </ul>
-                  <Link href="/company/signup" className="block text-center bg-cyan-600 hover:bg-cyan-700 text-white py-3 rounded-xl font-semibold transition">
+                  <button
+                    onClick={() => handleGetStarted(plan)}
+                    className="w-full text-center bg-cyan-600 hover:bg-cyan-700 text-white py-3 rounded-xl font-semibold transition"
+                  >
                     Get Started
-                  </Link>
+                  </button>
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Optional: Show login status message */}
+        {isLoggedIn && (
+          <div className="text-center mt-8 text-sm text-gray-500">
+            You are logged in. Clicking Get Started will take you to the payment page.
           </div>
         )}
       </div>
