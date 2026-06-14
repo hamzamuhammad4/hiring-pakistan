@@ -32,7 +32,7 @@ export default function CompanyLogin() {
       
       // 2. Check if email is verified
       if (!user.emailVerified) {
-        toast.error("❌ Please verify your email before logging in. Check your inbox.");
+        toast.error("Please verify your email before logging in. Check your inbox.");
         await auth.signOut();
         setLoading(false);
         return;
@@ -42,7 +42,7 @@ export default function CompanyLogin() {
       const companyDoc = await getDoc(doc(db, "companies", user.uid));
       
       if (!companyDoc.exists()) {
-        toast.error("❌ Company profile not found. Please contact support.");
+        toast.error("Company profile not found. Please contact support.");
         await auth.signOut();
         setLoading(false);
         return;
@@ -50,9 +50,9 @@ export default function CompanyLogin() {
       
       const companyData = companyDoc.data();
       
-      // ✅ 4. CRITICAL: Check if company is BLOCKED
+      // 4. Check if company is blocked
       if (companyData.status === "blocked") {
-        toast.error("🚫 Your account has been BLOCKED by admin. Please contact support at info.hiringpakistan@gmail.com");
+        toast.error("Your account has been blocked by admin. Please contact support at info.hiringpakistan@gmail.com");
         await auth.signOut();
         setLoading(false);
         return;
@@ -60,13 +60,13 @@ export default function CompanyLogin() {
       
       // 5. Check if company is active
       if (companyData.status !== "active") {
-        toast.error("⚠️ Your account is not active. Please contact support.");
+        toast.error("Your account is not active. Please contact support.");
         await auth.signOut();
         setLoading(false);
         return;
       }
       
-      toast.success("✅ Login successful!");
+      toast.success("Login successful!");
       router.push("/company/dashboard");
       
     } catch (error) {

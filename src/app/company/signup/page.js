@@ -1,4 +1,4 @@
-// src/app/company/signup/page.js - WITH ADMIN EMAIL PREVENTION
+// src/app/company/signup/page.js - WITHOUT EMOJIS
 "use client";
 
 import { useState } from "react";
@@ -67,7 +67,7 @@ export default function CompanySignup() {
     }
     
     if (ADMIN_EMAILS.includes(formData.email)) {
-      toast.error("❌ This email cannot register as a company. Please use a different email.");
+      toast.error("This email cannot register as a company. Please use a different email.");
       return;
     }
     
@@ -87,7 +87,7 @@ export default function CompanySignup() {
       // STEP 1: Check if company name already exists
       const companyNameExists = await checkCompanyNameExists(formData.companyName);
       if (companyNameExists) {
-        toast.error("❌ This company name is already registered. Please use a different name.");
+        toast.error("This company name is already registered. Please use a different name.");
         setLoading(false);
         return;
       }
@@ -95,7 +95,7 @@ export default function CompanySignup() {
       // STEP 2: Check if email already exists in Firestore
       const emailExists = await checkEmailExistsInFirestore(formData.email);
       if (emailExists) {
-        toast.error("❌ This email is already registered. Please use a different email or login.");
+        toast.error("This email is already registered. Please use a different email or login.");
         setLoading(false);
         return;
       }
@@ -136,7 +136,7 @@ export default function CompanySignup() {
         updatedAt: new Date()
       });
       
-      toast.success("✅ Account created! Please verify your email before logging in.");
+      toast.success("Account created! Please verify your email before logging in.");
       router.push("/company/login");
       
     } catch (error) {
@@ -144,7 +144,7 @@ export default function CompanySignup() {
       
       // Handle Firebase Auth errors
       if (error.code === 'auth/email-already-in-use') {
-        toast.error("❌ This email is already registered. Please login instead.");
+        toast.error("This email is already registered. Please login instead.");
       } else if (error.code === 'auth/weak-password') {
         toast.error("Password is too weak. Please use a stronger password.");
       } else {
@@ -184,7 +184,7 @@ export default function CompanySignup() {
                 required 
               />
             </div>
-            <p className="text-xs text-gray-400 mt-1">⚠️ This company name must be unique</p>
+            <p className="text-xs text-gray-400 mt-1">This company name must be unique</p>
           </div>
 
           <div>
@@ -221,7 +221,7 @@ export default function CompanySignup() {
                 required 
               />
             </div>
-            <p className="text-xs text-gray-400 mt-1">⚠️ Use a valid email address for verification</p>
+            <p className="text-xs text-gray-400 mt-1">Use a valid email address for verification</p>
           </div>
 
           <div>
@@ -294,7 +294,7 @@ export default function CompanySignup() {
           </div>
 
           <div className="bg-blue-50 p-2 rounded-lg">
-            <p className="text-xs text-blue-800 text-center">⚠️ Start with <strong>0 credits</strong> — buy credits to view CVs.</p>
+            <p className="text-xs text-blue-800 text-center">Start with <strong>0 credits</strong> — buy credits to view CVs.</p>
           </div>
 
           <button 

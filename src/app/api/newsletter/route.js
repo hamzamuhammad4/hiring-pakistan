@@ -1,40 +1,25 @@
 import { NextResponse } from 'next/server';
-import { initializeApp, getApps } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
 
-// Initialize Admin SDK (bypasses client-side rules)
-if (!getApps().length) {
-  initializeApp({
-    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  });
-}
-
-const db = getFirestore();
+// Temporary in-memory storage
+let subscribers = [];
 
 export async function POST(request) {
   try {
     const { email } = await request.json();
     
+    console.log("Received email:", email);
+    
     if (!email || !email.includes('@')) {
       return NextResponse.json({ error: 'Valid email required' }, { status: 400 });
     }
     
-    // Check if already subscribed
-    const existing = await db.collection('newsletter').where('email', '==', email).get();
-    
-    if (!existing.empty) {
+    if (subscribers.includes(email)) {
       return NextResponse.json({ message: 'Already subscribed!' }, { status: 200 });
     }
     
-    // Add to Firestore (Admin SDK bypasses all rules)
-    await db.collection('newsletter').add({
-      email: email,
-      subscribedAt: new Date(),
-      status: 'active',
-      source: 'footer'
-    });
-    
-    console.log('New subscriber:', email);
+    subscribers.push(email);
+    console.log("Subscriber added:", email);
+    console.log("Total subscribers:", subscribers.length);
     
     return NextResponse.json({ 
       success: true, 
@@ -42,7 +27,7 @@ export async function POST(request) {
     });
     
   } catch (error) {
-    console.error('Error:', error);
+    console.error("Error:", error);
     return NextResponse.json({ error: 'Failed to subscribe' }, { status: 500 });
   }
 }
