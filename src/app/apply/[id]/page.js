@@ -143,9 +143,7 @@ export default function ApplyPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // ✅ Add skill - Convert to UPPERCASE
   const addSkill = (skill) => {
-    // Convert to uppercase
     const upperCaseSkill = skill.trim().toUpperCase();
     
     if (upperCaseSkill && !formData.skills.includes(upperCaseSkill)) {
@@ -262,7 +260,6 @@ export default function ApplyPage() {
         </Link>
 
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          {/* Header */}
           <div className="bg-gradient-to-r from-cyan-600 to-blue-700 px-6 py-5">
             <div className="flex items-center gap-4">
               <div className="bg-white/20 backdrop-blur rounded-xl p-3">
@@ -277,17 +274,14 @@ export default function ApplyPage() {
             </div>
           </div>
 
-          {/* Info Message */}
           <div className="bg-green-50 border border-green-200 rounded-lg p-3 mx-6 mt-6">
             <p className="text-sm text-green-700 flex items-center justify-center gap-2">
               <CheckCircle className="h-4 w-4" /> No account required. Your application will be sent directly to the employer.
             </p>
           </div>
 
-          {/* Form */}
           <div className="p-6">
             <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Row 1: Full Name & Email */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -325,7 +319,6 @@ export default function ApplyPage() {
                 </div>
               </div>
 
-              {/* Row 2: Phone & City */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -363,7 +356,6 @@ export default function ApplyPage() {
                 </div>
               </div>
 
-              {/* Row 3: Experience & Skills */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -385,18 +377,26 @@ export default function ApplyPage() {
                   {errors.experience && <p className="text-red-500 text-xs mt-1">{errors.experience}</p>}
                 </div>
 
-                {/* Skills Field - Required */}
+                {/* ✅ FIXED: Skills Field - Better mobile responsive tags */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
                     Skills <span className="text-red-500">*</span>
                   </label>
                   <div className={`border rounded-lg focus-within:ring-2 focus-within:ring-cyan-500 focus-within:border-transparent p-2 bg-white ${errors.skills ? 'border-red-500' : 'border-gray-300'}`}>
+                    {/* Skills Tags - Improved for mobile */}
                     {formData.skills.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mb-2">
+                      <div className="flex flex-wrap gap-2 mb-2">
                         {formData.skills.map((skill, index) => (
-                          <span key={index} className="inline-flex items-center gap-1 bg-cyan-100 text-cyan-800 px-2 py-1 rounded-md text-sm font-medium uppercase">
+                          <span 
+                            key={index} 
+                            className="inline-flex items-center gap-1.5 bg-cyan-100 text-cyan-800 px-3 py-1 rounded-full text-sm font-medium uppercase shadow-sm"
+                          >
                             {skill}
-                            <button type="button" onClick={() => removeSkill(skill)} className="hover:text-red-600">
+                            <button 
+                              type="button" 
+                              onClick={() => removeSkill(skill)} 
+                              className="hover:text-red-600 focus:outline-none"
+                            >
                               <X className="h-3 w-3" />
                             </button>
                           </span>
@@ -416,8 +416,14 @@ export default function ApplyPage() {
                       {showSuggestions && suggestions.length > 0 && (
                         <div ref={suggestionsRef} className="absolute z-10 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                           {suggestions.map((skill, index) => (
-                            <button key={index} type="button" onClick={() => addSkill(skill)} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center justify-between">
-                              <span>{skill}</span><Plus className="h-3 w-3 text-gray-400" />
+                            <button 
+                              key={index} 
+                              type="button" 
+                              onClick={() => addSkill(skill)} 
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center justify-between"
+                            >
+                              <span>{skill}</span>
+                              <Plus className="h-3 w-3 text-gray-400" />
                             </button>
                           ))}
                         </div>
@@ -429,7 +435,6 @@ export default function ApplyPage() {
                 </div>
               </div>
 
-              {/* Cover Letter - Optional */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Cover Letter (Optional)</label>
                 <textarea
@@ -442,7 +447,6 @@ export default function ApplyPage() {
                 />
               </div>
 
-              {/* CV Upload */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Upload CV <span className="text-red-500">*</span>
@@ -477,7 +481,6 @@ export default function ApplyPage() {
                 {errors.cv && <p className="text-red-500 text-xs mt-1">{errors.cv}</p>}
               </div>
 
-              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={submitting}

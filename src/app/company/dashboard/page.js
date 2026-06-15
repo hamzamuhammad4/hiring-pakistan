@@ -1,4 +1,4 @@
-// src/app/company/dashboard/page.js
+// src/app/company/dashboard/page.js - FIXED TOTAL VIEWS
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -51,7 +51,7 @@ export default function CompanyDashboard() {
   const [error, setError] = useState("");
   const [companyData, setCompanyData] = useState({ credits: 0, plan: 'Basic' });
   const [recentApps, setRecentApps] = useState([]);
-  const [rejectedApps, setRejectedApps] = useState([]); // ✅ NEW: Rejected applications
+  const [rejectedApps, setRejectedApps] = useState([]);
   const [emailVerified, setEmailVerified] = useState(false);
   const [sendingVerification, setSendingVerification] = useState(false);
   
@@ -62,7 +62,7 @@ export default function CompanyDashboard() {
     pending: 0,
     reviewed: 0,
     shortlisted: 0,
-    rejected: 0,  // ✅ NEW: Rejected count
+    rejected: 0,
     totalViews: 0
   });
 
@@ -71,6 +71,26 @@ export default function CompanyDashboard() {
   const formatSalary = (salary) => {
     if (!salary) return "Negotiable";
     return salary.replace(/\$/g, 'PKR');
+  };
+
+  // ✅ Function to fetch total views from all jobs
+  const fetchTotalViews = async (userId) => {
+    try {
+      const jobsQuery = query(
+        collection(db, "jobs"),
+        where("companyId", "==", userId)
+      );
+      const jobsSnapshot = await getDocs(jobsQuery);
+      let total = 0;
+      jobsSnapshot.docs.forEach(doc => {
+        const jobData = doc.data();
+        total += jobData.views || 0;
+      });
+      return total;
+    } catch (error) {
+      console.error("Error fetching total views:", error);
+      return 0;
+    }
   };
 
   useEffect(() => {
@@ -151,6 +171,7 @@ export default function CompanyDashboard() {
         setJobs(activeJobsList);
         setPendingJobs(pendingJobsList);
 
+        // ✅ Calculate total views correctly
         let totalViews = 0;
         jobList.forEach(job => {
           totalViews += job.views || 0;
@@ -163,7 +184,7 @@ export default function CompanyDashboard() {
           totalViews: totalViews
         }));
 
-        // ✅ Real-time applications listener
+        // Real-time applications listener
         const unsubscribeApps = onSnapshot(collection(db, "applications"), (snapshot) => {
           const allApps = snapshot.docs.map((doc) => ({
             id: doc.id,
@@ -177,11 +198,10 @@ export default function CompanyDashboard() {
           const currentCount = companyApps.length;
 
           if (currentCount > prevAppCountRef.current && prevAppCountRef.current > 0) {
-            toast.success("📬 New application received!");
+            toast.success("New application received!");
           }
           prevAppCountRef.current = currentCount;
 
-          // ✅ Update stats with rejected count
           setStats((prev) => ({
             ...prev,
             totalApplications: currentCount,
@@ -191,14 +211,12 @@ export default function CompanyDashboard() {
             rejected: companyApps.filter((app) => app.status === "rejected" || app.cvStatus === "rejected").length,
           }));
 
-          // Recent applications (pending/shortlisted/reviewed)
           const recent = companyApps.filter(app => 
             app.status === "pending" || app.status === "reviewed" || app.status === "shortlisted"
           ).sort((a, b) => 
             new Date(b.appliedAt?.toDate?.() || 0) - new Date(a.appliedAt?.toDate?.() || 0)
           ).slice(0, 5);
           
-          // ✅ Rejected applications
           const rejected = companyApps.filter(app => 
             app.status === "rejected" || app.cvStatus === "rejected"
           ).sort((a, b) => 
@@ -261,7 +279,7 @@ export default function CompanyDashboard() {
         ...prev,
         activeJobs: prev.activeJobs - 1,
       }));
-      toast.success("✅ Job deleted successfully!");
+      toast.success("Job deleted successfully!");
     } catch (err) {
       console.error("Delete error:", err);
       toast.error("Failed to delete job");
@@ -404,14 +422,14 @@ export default function CompanyDashboard() {
             <h3 className="text-2xl font-bold">{stats.shortlisted}</h3>
             <p className="text-xs text-purple-100">Shortlisted</p>
           </div>
-          {/* ✅ NEW: Rejected Card */}
           <div className="bg-gradient-to-br from-red-500 to-red-700 rounded-2xl shadow-lg p-4 text-white">
             <XCircle className="h-7 w-7 mb-2 opacity-90" />
             <h3 className="text-2xl font-bold">{stats.rejected}</h3>
             <p className="text-xs text-red-100">Rejected</p>
           </div>
+          {/* ✅ Total Views Card - Fixed */}
           <div className="bg-gradient-to-br from-pink-500 to-pink-700 rounded-2xl shadow-lg p-4 text-white">
-            <TrendingUp className="h-7 w-7 mb-2 opacity-90" />
+            <Eye className="h-7 w-7 mb-2 opacity-90" />
             <h3 className="text-2xl font-bold">{stats.totalViews}</h3>
             <p className="text-xs text-pink-100">Total Views</p>
           </div>
@@ -479,7 +497,7 @@ export default function CompanyDashboard() {
           </div>
         )}
 
-        {/* ✅ NEW: Rejected Applications Section */}
+        {/* Rejected Applications Section */}
         {rejectedApps.length > 0 && (
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-4">

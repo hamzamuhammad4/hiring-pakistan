@@ -1,4 +1,4 @@
-// src/app/admin/dashboard/page.js
+// src/app/admin/dashboard/page.js - UPDATED
 "use client";
 
 import { useState, useEffect } from "react";
@@ -74,23 +74,28 @@ export default function AdminDashboard() {
           const snapshot = await getDocs(collection(db, collectionName));
           return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         } catch (err) {
-          console.log(`Collection '${collectionName}' not found or empty:`, err.message);
+          console.log(`Collection '${collectionName}' not found:`, err.message);
           return [];
         }
       };
 
-      // Get all data safely
+      // Get all data
       let companies = await getCollectionData("companies");
       const jobs = await getCollectionData("jobs");
       const applications = await getCollectionData("applications");
       const complaints = await getCollectionData("complaints");
+      const paymentRequests = await getCollectionData("payment_requests");
 
-      // ✅ FILTER OUT ADMIN COMPANY - don't count admin's own company
+      // Filter out admin company
       if (adminEmail) {
         companies = companies.filter(company => company.email !== adminEmail);
       }
 
-      // Calculate stats
+      // ✅ Calculate real earnings from approved payment requests
+      const approvedPayments = paymentRequests.filter(p => p.status === 'approved' || p.status === 'completed');
+      const totalEarnings = approvedPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+
+      // Calculate other stats
       const pendingJobsCount = jobs.filter(j => j.status === 'pending').length;
       const pendingCVsCount = applications.filter(a => a.cvStatus === 'pending' || !a.cvStatus).length;
       const pendingComplaintsCount = complaints.filter(c => c.status === 'pending').length;
@@ -106,10 +111,10 @@ export default function AdminDashboard() {
         totalViews: totalViewsCount,
         pendingCVs: pendingCVsCount,
         pendingComplaints: pendingComplaintsCount,
-        totalEarnings: 2500 // Example - will be from payments collection
+        totalEarnings: totalEarnings  // ✅ Real data from payment_requests
       });
 
-      // Recent companies (last 5) - filtered out admin company
+      // Recent companies (last 5)
       const sortedCompanies = [...companies].sort((a, b) => 
         (b.createdAt?.toDate?.() || 0) - (a.createdAt?.toDate?.() || 0)
       ).slice(0, 5);
@@ -184,13 +189,11 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      {/* Page Title */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
         <p className="text-gray-500 mt-1">Welcome back! Here's what's happening today.</p>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard 
           title="Total Companies" 
@@ -222,7 +225,6 @@ export default function AdminDashboard() {
         />
       </div>
 
-      {/* Pending Actions Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Link href="/admin/jobs" className="bg-yellow-50 rounded-2xl p-6 hover:shadow-lg transition block">
           <div className="flex items-center gap-4">
@@ -261,7 +263,6 @@ export default function AdminDashboard() {
         </Link>
       </div>
 
-      {/* Monthly Chart */}
       <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
         <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-cyan-600" />
@@ -284,9 +285,7 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* Recent Companies & Jobs */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Recent Companies */}
         <div className="bg-white rounded-2xl shadow-lg p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -324,7 +323,6 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        {/* Recent Jobs */}
         <div className="bg-white rounded-2xl shadow-lg p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -365,11 +363,10 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Empty State Message */}
       {stats.totalCompanies === 0 && stats.totalJobs === 0 && (
         <div className="mt-8 bg-blue-50 rounded-2xl p-8 text-center">
           <p className="text-blue-800">
-            📊 No data yet. Once companies register and post jobs, you'll see them here.
+            No data yet. Once companies register and post jobs, you'll see them here.
           </p>
         </div>
       )}
